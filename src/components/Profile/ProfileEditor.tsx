@@ -4,14 +4,27 @@ import {
   X, 
   Trash2,
   Check,
-  AlertCircle
+  AlertCircle,
+  Search
 } from 'lucide-react';
 import { useProfile, UserProfile, Achievement } from '../../hooks/useProfile';
+import { storage } from '../../firebase/config';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface ProfileEditorProps {
   onClose: () => void;
   profile: UserProfile | null;
 }
+
+const AVAILABLE_SKILLS = [
+  'JavaScript', 'TypeScript', 'React', 'Node.js', 'Python', 'Django', 'Flask', 'Java', 'Spring Boot',
+  'Go', 'Ruby', 'Ruby on Rails', 'PHP', 'Laravel', 'C#', '.NET', 'Swift', 'Kotlin', 'SQL', 'PostgreSQL',
+  'MySQL', 'MongoDB', 'Firebase', 'AWS', 'Docker', 'Kubernetes', 'Git', 'Agile Methodologies', 'Scrum'
+];
+
+const AVAILABLE_LANGUAGES = [
+  'English', 'Spanish', 'Mandarin Chinese', 'Hindi', 'French', 'Arabic', 'Bengali', 'Russian', 'Portuguese', 'Indonesian'
+];
 
 export function ProfileEditor({ onClose, profile }: ProfileEditorProps) {
   const { 
@@ -30,7 +43,10 @@ export function ProfileEditor({ onClose, profile }: ProfileEditorProps) {
 
   const [activeTab, setActiveTab] = useState('basic');
   const [loading, setLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [skillSearch, setSkillSearch] = useState('');
+  const [languageSearch, setLanguageSearch] = useState('');
   const profilePicRef = useRef<HTMLInputElement>(null);
   const coverPhotoRef = useRef<HTMLInputElement>(null);
 
@@ -97,15 +113,52 @@ export function ProfileEditor({ onClose, profile }: ProfileEditorProps) {
     }
   }, [profile]);
 
+  const handleAddSkill = (skill: string) => {
+    if (!selectedSkills.includes(skill)) {
+      setSelectedSkills([...selectedSkills, skill]);
+    }
+  };
+
+  const handleRemoveSkill = (skill: string) => {
+    setSelectedSkills(selectedSkills.filter(s => s !== skill));
+  };
+
+  const handleAddLanguage = (lang: string) => {
+    if (!selectedLanguages.includes(lang)) {
+      setSelectedLanguages([...selectedLanguages, lang]);
+    }
+  };
+
+  const handleRemoveLanguage = (lang: string) => {
+    setSelectedLanguages(selectedLanguages.filter(l => l !== lang));
+  };
+
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
     setTimeout(() => setMessage(null), 3000);
   };
 
-  // TODO: Implement image upload functionality
   const handleImageUpload = async (file: File, type: 'profile' | 'cover') => {
-    console.log('Uploading image...', file, type);
-    showMessage('error', 'Image upload is not implemented yet.');
+    if (!profile) return;
+
+    const imageType = type === 'profile' ? 'profilePicture' : 'coverPhoto';
+
+    setIsUploading(true);
+    showMessage('success', `Uploading ${type === 'profile' ? 'profile picture' : 'cover photo'}...`);
+    const storageRef = ref(storage, `user-uploads/${profile.id}/${imageType}/${file.name}`);
+
+    try {
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
+      await updateProfile({ [imageType]: downloadURL });
+      showMessage('success', `${type === 'profile' ? 'Profile picture' : 'Cover photo'} updated successfully.`);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      showMessage('error', 'Failed to upload image. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleSaveBasicInfo = async () => {
@@ -349,9 +402,16 @@ export function ProfileEditor({ onClose, profile }: ProfileEditorProps) {
                     </div>
                     <button
                       onClick={() => profilePicRef.current?.click()}
-                      className="absolute bottom-0 right-0 bg-[#0a66c2] text-white p-2 rounded-full hover:bg-[#004182] transition-colors"
+                      disabled={isUploading}
+                      className="absolute bottom-0 right-0 bg-[#0a66c2] text-white p-2 rounded-full hover:bg-[#004182] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Camera className="w-4 h-4" />
+                      {isUploading ? (
+                        <div className="flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent animate-spin"></div>
+                        </div>
+                      ) : (
+                        <Camera className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                   <input
@@ -382,7 +442,8 @@ export function ProfileEditor({ onClose, profile }: ProfileEditorProps) {
                   </div>
                   <button
                     onClick={() => coverPhotoRef.current?.click()}
-                    className="absolute top-2 right-2 bg-white text-gray-700 p-2 rounded-full hover:bg-gray-50 transition-colors"
+                    disabled={isUploading}
+                    className="absolute top-2 right-2 bg-white text-gray-700 p-2 rounded-full hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Camera className="w-4 h-4" />
                   </button>
@@ -466,96 +527,17 @@ export function ProfileEditor({ onClose, profile }: ProfileEditorProps) {
           {/* Education Tab */}
           {activeTab === 'education' && (
             <div className="space-y-6">
+              {/* This is a placeholder for the Education tab content */}
               <h3 className="text-lg font-medium text-gray-900">Education</h3>
-              
-              {/* Add Education Form */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-4">Add Education</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    placeholder="School"
-                    value={educationForm.school}
-                    onChange={(e) => setEducationForm({...educationForm, school: e.target.value})}
-                    className="linkedin-input"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Degree"
-                    value={educationForm.degree}
-                    onChange={(e) => setEducationForm({...educationForm, degree: e.target.value})}
-                    className="linkedin-input"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Field of Study"
-                    value={educationForm.fieldOfStudy}
-                    onChange={(e) => setEducationForm({...educationForm, fieldOfStudy: e.target.value})}
-                    className="linkedin-input"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Start Year"
-                    value={educationForm.startYear}
-                    onChange={(e) => setEducationForm({...educationForm, startYear: e.target.value})}
-                    className="linkedin-input"
-                  />
-                  <input
-                    type="text"
-                    placeholder="End Year (optional)"
-                    value={educationForm.endYear}
-                    onChange={(e) => setEducationForm({...educationForm, endYear: e.target.value})}
-                    className="linkedin-input"
-                  />
-                </div>
-                <textarea
-                  placeholder="Description (optional)"
-                  value={educationForm.description}
-                  onChange={(e) => setEducationForm({...educationForm, description: e.target.value})}
-                  rows={3}
-                  className="linkedin-input mt-4"
-                />
-                <button
-                  onClick={handleAddEducation}
-                  disabled={loading}
-                  className="linkedin-btn-primary mt-4"
-                >
-                  {loading ? 'Adding...' : 'Add Education'}
-                </button>
-              </div>
-
-              {/* Education List */}
-              <div className="space-y-4">
-                {profile?.education?.map((edu) => (
-                  <div key={edu.id} className="linkedin-card p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-semibold text-gray-900">{edu.school}</h4>
-                        <p className="text-gray-600">{edu.degree}, {edu.fieldOfStudy}</p>
-                        <p className="text-sm text-gray-500">{edu.startYear} - {edu.endYear || 'Present'}</p>
-                        {edu.description && (
-                          <p className="text-sm text-gray-700 mt-2">{edu.description}</p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => removeEducation(edu.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <p className="text-gray-500">Education section coming soon.</p>
             </div>
           )}
 
-          {/* Experience Tab */}
+          {/* Work Experience Tab */}
           {activeTab === 'experience' && (
             <div className="space-y-6">
               <h3 className="text-lg font-medium text-gray-900">Work Experience</h3>
               
-              {/* Add Experience Form */}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium text-gray-900 mb-4">Add Work Experience</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -589,29 +571,32 @@ export function ProfileEditor({ onClose, profile }: ProfileEditorProps) {
                   />
                   <input
                     type="text"
-                    placeholder="End Date (optional)"
+                    placeholder="End Date (or present)"
                     value={workForm.endDate}
                     onChange={(e) => setWorkForm({...workForm, endDate: e.target.value})}
                     className="linkedin-input"
                     disabled={workForm.current}
                   />
-                  <div className="flex items-center">
+                  <div className="flex items-center md:col-span-2">
                     <input
                       type="checkbox"
+                      id="currentJob"
                       checked={workForm.current}
-                      onChange={(e) => setWorkForm({...workForm, current: e.target.checked})}
-                      className="mr-2"
+                      onChange={(e) => setWorkForm({...workForm, current: e.target.checked, endDate: e.target.checked ? 'Present' : ''})}
+                      className="h-4 w-4 text-[#0a66c2] focus:ring-[#0a66c2] border-gray-300 rounded"
                     />
-                    <label className="text-sm text-gray-700">I currently work here</label>
+                    <label htmlFor="currentJob" className="ml-2 block text-sm text-gray-900">
+                      I currently work here
+                    </label>
                   </div>
+                  <textarea
+                    placeholder="Description"
+                    value={workForm.description}
+                    onChange={(e) => setWorkForm({...workForm, description: e.target.value})}
+                    rows={4}
+                    className="linkedin-input md:col-span-2"
+                  ></textarea>
                 </div>
-                <textarea
-                  placeholder="Description"
-                  value={workForm.description}
-                  onChange={(e) => setWorkForm({...workForm, description: e.target.value})}
-                  rows={3}
-                  className="linkedin-input mt-4"
-                />
                 <button
                   onClick={handleAddWorkExperience}
                   disabled={loading}
@@ -621,21 +606,18 @@ export function ProfileEditor({ onClose, profile }: ProfileEditorProps) {
                 </button>
               </div>
 
-              {/* Experience List */}
               <div className="space-y-4">
-                {profile?.workExperience?.map((exp) => (
+                {profile?.workExperience?.map((exp, index) => (
                   <div key={exp.id} className="linkedin-card p-4">
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-semibold text-gray-900">{exp.title}</h4>
-                        <p className="text-gray-600">{exp.company}</p>
+                        <p className="text-gray-600">{exp.company} · {exp.location}</p>
                         <p className="text-sm text-gray-500">{exp.startDate} - {exp.endDate || 'Present'}</p>
-                        {exp.description && (
-                          <p className="text-sm text-gray-700 mt-2">{exp.description}</p>
-                        )}
+                        {exp.description && <p className="text-sm text-gray-700 mt-2 whitespace-pre-line">{exp.description}</p>}
                       </div>
                       <button
-                        onClick={() => removeWorkExperience(exp.id)}
+                        onClick={() => removeWorkExperience(index)}
                         className="text-red-600 hover:text-red-800"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -647,18 +629,154 @@ export function ProfileEditor({ onClose, profile }: ProfileEditorProps) {
             </div>
           )}
 
+          {/* Skills & Languages Tab */}
+          {activeTab === 'skills' && (
+            <div className="space-y-8">
+              {/* Skills Section */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Skills</h3>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Search className="w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search for skills..."
+                      value={skillSearch}
+                      onChange={(e) => setSkillSearch(e.target.value)}
+                      className="linkedin-input w-full"
+                    />
+                  </div>
+                  <div className="max-h-40 overflow-y-auto space-y-2 mb-4">
+                    {AVAILABLE_SKILLS.filter(skill => 
+                      skill.toLowerCase().includes(skillSearch.toLowerCase()) && 
+                      !selectedSkills.includes(skill)
+                    ).map(skill => (
+                      <button 
+                        key={skill} 
+                        onClick={() => handleAddSkill(skill)} 
+                        className="w-full text-left p-2 rounded-md hover:bg-gray-200 transition-colors text-sm"
+                      >
+                        {skill}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <h4 className="font-medium text-gray-800 mb-2">Your Skills</h4>
+                  {selectedSkills.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSkills.map(skill => (
+                        <div key={skill} className="flex items-center bg-[#0a66c2] text-white text-sm font-medium px-3 py-1 rounded-full">
+                          <span>{skill}</span>
+                          <button onClick={() => handleRemoveSkill(skill)} className="ml-2 text-white hover:bg-white/20 rounded-full p-0.5">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No skills added yet.</p>
+                  )}
+                </div>
+                <button onClick={handleSaveSkills} disabled={loading} className="linkedin-btn-primary mt-4">
+                  {loading ? 'Saving...' : 'Save Skills'}
+                </button>
+              </div>
+
+              {/* Languages Section */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Languages</h3>
+                 <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Search className="w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search for languages..."
+                      value={languageSearch}
+                      onChange={(e) => setLanguageSearch(e.target.value)}
+                      className="linkedin-input w-full"
+                    />
+                  </div>
+                  <div className="max-h-40 overflow-y-auto space-y-2 mb-4">
+                    {AVAILABLE_LANGUAGES.filter(lang => 
+                      lang.toLowerCase().includes(languageSearch.toLowerCase()) && 
+                      !selectedLanguages.includes(lang)
+                    ).map(lang => (
+                      <button 
+                        key={lang} 
+                        onClick={() => handleAddLanguage(lang)} 
+                        className="w-full text-left p-2 rounded-md hover:bg-gray-200 transition-colors text-sm"
+                      >
+                        {lang}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <h4 className="font-medium text-gray-800 mb-2">Your Languages</h4>
+                  {selectedLanguages.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedLanguages.map(lang => (
+                        <div key={lang} className="flex items-center bg-[#0a66c2] text-white text-sm font-medium px-3 py-1 rounded-full">
+                          <span>{lang}</span>
+                          <button onClick={() => handleRemoveLanguage(lang)} className="ml-2 text-white hover:bg-white/20 rounded-full p-0.5">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No languages added yet.</p>
+                  )}
+                </div>
+                <button onClick={handleSaveLanguages} disabled={loading} className="linkedin-btn-primary mt-4">
+                  {loading ? 'Saving...' : 'Save Languages'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Achievements Tab */}
+          {activeTab === 'achievements' && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-medium text-gray-900">Achievements</h3>
+              <p className="text-gray-500">Achievements section coming soon.</p>
+            </div>
+          )}
+
+          {/* Projects Tab */}
+          {activeTab === 'projects' && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-medium text-gray-900">Projects</h3>
+              <p className="text-gray-500">Projects section coming soon.</p>
+            </div>
+          )}
+
+          {/* Certificates Tab */}
+          {activeTab === 'certificates' && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-medium text-gray-900">Certificates</h3>
+              <p className="text-gray-500">Certificates section coming soon.</p>
+            </div>
+          )}
+
           {/* Skills Tab */}
           {activeTab === 'skills' && (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium text-gray-900">Skills</h3>
+              <h3 className="text-lg font-medium text-gray-900">Skills & Languages</h3>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Skills
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
-                  {AVAILABLE_SKILLS.map((skill) => (
-                    <label key={skill} className="flex items-center space-x-2">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Add Skills</h4>
+                <input
+                  type="text"
+                  placeholder="Search for skills..."
+                  value={skillSearch}
+                  onChange={(e) => setSkillSearch(e.target.value)}
+                  className="linkedin-input mb-4"
+                />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto border p-2 rounded-md">
+                  {AVAILABLE_SKILLS.filter(skill => skill.toLowerCase().includes(skillSearch.toLowerCase())).map((skill) => (
+                    <label key={skill} className="flex items-center space-x-2 p-1 rounded-md hover:bg-gray-100 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={selectedSkills.includes(skill)}
@@ -669,7 +787,7 @@ export function ProfileEditor({ onClose, profile }: ProfileEditorProps) {
                             setSelectedSkills(selectedSkills.filter(s => s !== skill));
                           }
                         }}
-                        className="rounded"
+                        className="rounded text-[#0a66c2] focus:ring-[#0a66c2]"
                       />
                       <span className="text-sm text-gray-700">{skill}</span>
                     </label>
@@ -684,13 +802,11 @@ export function ProfileEditor({ onClose, profile }: ProfileEditorProps) {
                 </button>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Languages
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Add Languages</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto border p-2 rounded-md">
                   {AVAILABLE_LANGUAGES.map((language) => (
-                    <label key={language} className="flex items-center space-x-2">
+                    <label key={language} className="flex items-center space-x-2 p-1 rounded-md hover:bg-gray-100 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={selectedLanguages.includes(language)}
@@ -701,7 +817,7 @@ export function ProfileEditor({ onClose, profile }: ProfileEditorProps) {
                             setSelectedLanguages(selectedLanguages.filter(l => l !== language));
                           }
                         }}
-                        className="rounded"
+                        className="rounded text-[#0a66c2] focus:ring-[#0a66c2]"
                       />
                       <span className="text-sm text-gray-700">{language}</span>
                     </label>
