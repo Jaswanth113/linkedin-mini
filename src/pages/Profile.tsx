@@ -24,17 +24,16 @@ import {
 } from 'lucide-react';
 
 export function Profile() {
-  const { currentUser } = useAuth();
-  const { profile, loading: profileLoading } = useProfile();
+  const { currentUser, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading } = useProfile(currentUser?.id, !!currentUser?.id);
   const { profileViews } = useProfileViews(currentUser?.id);
   const [showEditor, setShowEditor] = useState(false);
   const [showUpdateForm, setShowUpdateForm] = useState(false);
-  
 
-  if (profileLoading) {
+  if (authLoading || profileLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0a66c2]"></div>
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#0a66c2]"></div>
       </div>
     );
   }
@@ -242,14 +241,14 @@ export function Profile() {
             
             {profile?.skills && profile.skills.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {profile.skills.slice(0, 9).map((skill, index) => (
+                {profile.skills.slice(0, 15).map((skill, index) => (
                   <span key={index} className="linkedin-skill-tag">
                     {skill}
                   </span>
                 ))}
-                {profile.skills.length > 9 && (
+                {profile.skills.length > 15 && (
                   <button className="text-[14px] text-[#666666] hover:text-[#0a66c2] font-medium">
-                    +{profile.skills.length - 9} more
+                    Show all {profile.skills.length} skills
                   </button>
                 )}
               </div>
@@ -257,12 +256,104 @@ export function Profile() {
               <p className="text-[14px] text-[#666666]">Add skills to showcase your expertise</p>
             )}
           </div>
+
+          {/* Achievements Section */}
+          <div className="linkedin-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[20px] font-semibold text-[#000000]">Achievements</h2>
+              <button onClick={() => setShowEditor(true)} className="p-2 hover:bg-[#f3f2ef] rounded-full transition-colors">
+                <Plus className="w-4 h-4 text-[#666666]" />
+              </button>
+            </div>
+            {profile?.achievements && profile.achievements.length > 0 ? (
+              <div className="space-y-6">
+                {profile.achievements.map((ach, index) => (
+                  <div key={index} className="flex items-start space-x-3">
+                    <div className="w-12 h-12 bg-[#f3f2ef] rounded flex items-center justify-center flex-shrink-0">
+                      <Award className="w-6 h-6 text-[#666666]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-[16px] font-semibold text-[#000000] mb-1">{ach.title}</h3>
+                      <p className="text-[14px] text-[#000000] mb-1">Issued by {ach.issuer}</p>
+                      <p className="text-[12px] text-[#666666]">{ach.date}</p>
+                      {ach.description && <p className="text-[14px] text-[#000000] mt-2 leading-[1.4]">{ach.description}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[14px] text-[#666666]">Showcase your awards, honors, and other achievements.</p>
+            )}
+          </div>
+
+          {/* Projects Section */}
+          <div className="linkedin-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[20px] font-semibold text-[#000000]">Projects</h2>
+              <button onClick={() => setShowEditor(true)} className="p-2 hover:bg-[#f3f2ef] rounded-full transition-colors">
+                <Plus className="w-4 h-4 text-[#666666]" />
+              </button>
+            </div>
+            {profile?.projects && profile.projects.length > 0 ? (
+              <div className="space-y-6">
+                {profile.projects.map((proj, index) => (
+                  <div key={index} className="flex items-start space-x-3">
+                    <div className="w-12 h-12 bg-[#f3f2ef] rounded flex items-center justify-center flex-shrink-0">
+                      <FolderOpen className="w-6 h-6 text-[#666666]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-[16px] font-semibold text-[#000000] mb-1">{proj.name}</h3>
+                      {proj.date && <p className="text-[12px] text-[#666666] mb-2">{proj.date}</p>}
+                      <p className="text-[14px] text-[#000000] leading-[1.4] mb-3">{proj.description}</p>
+                      {proj.technologies && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {proj.technologies.map(tech => <span key={tech} className="linkedin-skill-tag text-xs">{tech}</span>)}
+                        </div>
+                      )}
+                      {proj.url && <a href={proj.url} target="_blank" rel="noopener noreferrer" className="text-[#0a66c2] font-medium text-[14px] hover:underline flex items-center">Show Project <ExternalLink className="w-4 h-4 ml-1" /></a>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[14px] text-[#666666]">Add projects to highlight your practical experience.</p>
+            )}
+          </div>
+
+          {/* Certifications Section */}
+          <div className="linkedin-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[20px] font-semibold text-[#000000]">Licenses & Certifications</h2>
+              <button onClick={() => setShowEditor(true)} className="p-2 hover:bg-[#f3f2ef] rounded-full transition-colors">
+                <Plus className="w-4 h-4 text-[#666666]" />
+              </button>
+            </div>
+            {profile?.certificates && profile.certificates.length > 0 ? (
+              <div className="space-y-6">
+                {profile.certificates.map((cert, index) => (
+                  <div key={index} className="flex items-start space-x-3">
+                    <div className="w-12 h-12 bg-[#f3f2ef] rounded flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-6 h-6 text-[#666666]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-[16px] font-semibold text-[#000000] mb-1">{cert.name}</h3>
+                      <p className="text-[14px] text-[#000000] mb-1">{cert.issuer}</p>
+                      <p className="text-[12px] text-[#666666]">Issued {cert.date}</p>
+                      {cert.url && <a href={cert.url} target="_blank" rel="noopener noreferrer" className="text-[#0a66c2] font-medium text-[14px] hover:underline flex items-center mt-2">Show credential <ExternalLink className="w-4 h-4 ml-1" /></a>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[14px] text-[#666666]">Add your professional licenses and certifications.</p>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Modals */}
       {showEditor && (
-        <ProfileEditor onClose={() => setShowEditor(false)} />
+        <ProfileEditor profile={profile} onClose={() => setShowEditor(false)} />
       )}
       {showUpdateForm && (
         <ProfileUpdateForm 

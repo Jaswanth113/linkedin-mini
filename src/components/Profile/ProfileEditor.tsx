@@ -1,46 +1,32 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { 
-  Edit, 
   Camera, 
   X, 
-  Plus, 
   Trash2,
-  Save,
-  ChevronDown,
   Check,
   AlertCircle
 } from 'lucide-react';
-import { useProfile, UserProfile, Education, WorkExperience, Project, Certificate } from '../../hooks/useProfile';
+import { useProfile, UserProfile, Achievement } from '../../hooks/useProfile';
 
 interface ProfileEditorProps {
   onClose: () => void;
+  profile: UserProfile | null;
 }
 
-export function ProfileEditor({ onClose }: ProfileEditorProps) {
+export function ProfileEditor({ onClose, profile }: ProfileEditorProps) {
   const { 
-    profile, 
     updateProfile, 
-    updateProfilePicture, 
-    updateCoverPhoto,
     addEducation,
-    updateEducation,
     removeEducation,
     addWorkExperience,
-    updateWorkExperience,
     removeWorkExperience,
-    updateSkills,
-    updateLanguages,
     addAchievement,
     removeAchievement,
     addProject,
-    updateProject,
     removeProject,
     addCertificate,
-    updateCertificate,
-    removeCertificate,
-    AVAILABLE_SKILLS,
-    AVAILABLE_LANGUAGES
-  } = useProfile();
+    removeCertificate
+  } = useProfile(profile?.id, !!profile?.id);
 
   const [activeTab, setActiveTab] = useState('basic');
   const [loading, setLoading] = useState(false);
@@ -58,16 +44,15 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
 
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-  const [newAchievement, setNewAchievement] = useState('');
+  const [newAchievement, setNewAchievement] = useState<Omit<Achievement, 'id'>>({ title: '', issuer: '', date: '', description: '' });
 
   // Education form
   const [educationForm, setEducationForm] = useState({
     school: '',
     degree: '',
-    field: '',
+    fieldOfStudy: '',
     startYear: '',
-    endYear: '',
-    description: ''
+    endYear: ''
   });
 
   // Work experience form
@@ -85,15 +70,16 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
   const [projectForm, setProjectForm] = useState({
     name: '',
     description: '',
-    link: '',
-    technologies: [] as string[]
+    url: '',
+    technologies: [] as string[],
+    date: ''
   });
 
   // Certificate form
   const [certificateForm, setCertificateForm] = useState({
-    title: '',
-    issuingOrg: '',
-    link: '',
+    name: '',
+    issuer: '',
+    url: '',
     date: ''
   });
 
@@ -116,22 +102,10 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
     setTimeout(() => setMessage(null), 3000);
   };
 
+  // TODO: Implement image upload functionality
   const handleImageUpload = async (file: File, type: 'profile' | 'cover') => {
-    try {
-      setLoading(true);
-      if (type === 'profile') {
-        await updateProfilePicture(file);
-        showMessage('success', 'Profile picture updated successfully!');
-      } else {
-        await updateCoverPhoto(file);
-        showMessage('success', 'Cover photo updated successfully!');
-      }
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      showMessage('error', 'Failed to upload image. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    console.log('Uploading image...', file, type);
+    showMessage('error', 'Image upload is not implemented yet.');
   };
 
   const handleSaveBasicInfo = async () => {
@@ -150,7 +124,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
   const handleSaveSkills = async () => {
     try {
       setLoading(true);
-      await updateSkills(selectedSkills);
+      await updateProfile({ skills: selectedSkills });
       showMessage('success', 'Skills updated successfully!');
     } catch (error) {
       console.error('Error saving skills:', error);
@@ -163,7 +137,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
   const handleSaveLanguages = async () => {
     try {
       setLoading(true);
-      await updateLanguages(selectedLanguages);
+      await updateProfile({ languages: selectedLanguages });
       showMessage('success', 'Languages updated successfully!');
     } catch (error) {
       console.error('Error saving languages:', error);
@@ -185,10 +159,9 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
       setEducationForm({
         school: '',
         degree: '',
-        field: '',
+        fieldOfStudy: '',
         startYear: '',
-        endYear: '',
-        description: ''
+        endYear: ''
       });
       showMessage('success', 'Education added successfully!');
     } catch (error) {
@@ -227,15 +200,15 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
   };
 
   const handleAddAchievement = async () => {
-    if (!newAchievement.trim()) {
-      showMessage('error', 'Please enter an achievement.');
+    if (!newAchievement.title.trim()) {
+      showMessage('error', 'Please enter an achievement title.');
       return;
     }
     
     try {
       setLoading(true);
       await addAchievement(newAchievement);
-      setNewAchievement('');
+      setNewAchievement({ title: '', issuer: '', date: '', description: '' });
       showMessage('success', 'Achievement added successfully!');
     } catch (error) {
       console.error('Error adding achievement:', error);
@@ -257,8 +230,9 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
       setProjectForm({
         name: '',
         description: '',
-        link: '',
-        technologies: []
+        url: '',
+        technologies: [],
+        date: ''
       });
       showMessage('success', 'Project added successfully!');
     } catch (error) {
@@ -270,7 +244,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
   };
 
   const handleAddCertificate = async () => {
-    if (!certificateForm.title || !certificateForm.issuingOrg) {
+    if (!certificateForm.name || !certificateForm.issuer) {
       showMessage('error', 'Please fill in all required fields.');
       return;
     }
@@ -279,9 +253,9 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
       setLoading(true);
       await addCertificate(certificateForm);
       setCertificateForm({
-        title: '',
-        issuingOrg: '',
-        link: '',
+        name: '',
+        issuer: '',
+        url: '',
         date: ''
       });
       showMessage('success', 'Certificate added successfully!');
@@ -515,8 +489,8 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
                   <input
                     type="text"
                     placeholder="Field of Study"
-                    value={educationForm.field}
-                    onChange={(e) => setEducationForm({...educationForm, field: e.target.value})}
+                    value={educationForm.fieldOfStudy}
+                    onChange={(e) => setEducationForm({...educationForm, fieldOfStudy: e.target.value})}
                     className="linkedin-input"
                   />
                   <input
@@ -557,7 +531,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-semibold text-gray-900">{edu.school}</h4>
-                        <p className="text-gray-600">{edu.degree} in {edu.field}</p>
+                        <p className="text-gray-600">{edu.degree}, {edu.fieldOfStudy}</p>
                         <p className="text-sm text-gray-500">{edu.startYear} - {edu.endYear || 'Present'}</p>
                         {edu.description && (
                           <p className="text-sm text-gray-700 mt-2">{edu.description}</p>
@@ -655,7 +629,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
                       <div>
                         <h4 className="font-semibold text-gray-900">{exp.title}</h4>
                         <p className="text-gray-600">{exp.company}</p>
-                        <p className="text-sm text-gray-500">{exp.startDate} - {exp.current ? 'Present' : exp.endDate}</p>
+                        <p className="text-sm text-gray-500">{exp.startDate} - {exp.endDate || 'Present'}</p>
                         {exp.description && (
                           <p className="text-sm text-gray-700 mt-2">{exp.description}</p>
                         )}
@@ -752,14 +726,34 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
               <div className="flex space-x-2">
                 <input
                   type="text"
-                  placeholder="Add an achievement"
-                  value={newAchievement}
-                  onChange={(e) => setNewAchievement(e.target.value)}
-                  className="linkedin-input flex-1"
+                  placeholder="Title"
+                  value={newAchievement.title}
+                  onChange={(e) => setNewAchievement({...newAchievement, title: e.target.value})}
+                  className="linkedin-input"
+                />
+                <input
+                  type="text"
+                  placeholder="Issuer"
+                  value={newAchievement.issuer}
+                  onChange={(e) => setNewAchievement({...newAchievement, issuer: e.target.value})}
+                  className="linkedin-input"
+                />
+                <input
+                  type="text"
+                  placeholder="Date"
+                  value={newAchievement.date}
+                  onChange={(e) => setNewAchievement({...newAchievement, date: e.target.value})}
+                  className="linkedin-input"
+                />
+                <textarea
+                  placeholder="Description (optional)"
+                  value={newAchievement.description}
+                  onChange={(e) => setNewAchievement({...newAchievement, description: e.target.value})}
+                  className="linkedin-input h-24"
                 />
                 <button
                   onClick={handleAddAchievement}
-                  disabled={loading || !newAchievement.trim()}
+                  disabled={loading || !newAchievement.title.trim()}
                   className="linkedin-btn-primary"
                 >
                   {loading ? 'Adding...' : 'Add'}
@@ -767,15 +761,21 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
               </div>
 
               <div className="space-y-2">
-                {profile?.achievements?.map((achievement, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-gray-700">{achievement}</span>
-                    <button
-                      onClick={() => removeAchievement(index)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                {profile?.achievements?.map((achievement) => (
+                  <div key={achievement.id} className="linkedin-card p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{achievement.title}</h4>
+                        <p className="text-gray-600">{achievement.issuer} - {achievement.date}</p>
+                        {achievement.description && <p className="text-sm text-gray-500 mt-2">{achievement.description}</p>}
+                      </div>
+                      <button
+                        onClick={() => achievement.id && removeAchievement(achievement.id)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -806,9 +806,9 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
                   />
                   <input
                     type="url"
-                    placeholder="Project Link (optional)"
-                    value={projectForm.link}
-                    onChange={(e) => setProjectForm({...projectForm, link: e.target.value})}
+                    placeholder="Project URL (optional)"
+                    value={projectForm.url}
+                    onChange={(e) => setProjectForm({...projectForm, url: e.target.value})}
                     className="linkedin-input"
                   />
                 </div>
@@ -827,10 +827,10 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-semibold text-gray-900">{project.name}</h4>
-                        <p className="text-gray-700 mt-1">{project.description}</p>
-                        {project.link && (
+                        <p className="text-gray-600">{project.description}</p>
+                        {project.url && (
                           <a 
-                            href={project.link} 
+                            href={project.url} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="text-[#0a66c2] hover:underline text-sm"
@@ -840,7 +840,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
                         )}
                       </div>
                       <button
-                        onClick={() => removeProject(project.id)}
+                        onClick={() => project.id && removeProject(project.id)}
                         className="text-red-600 hover:text-red-800"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -862,23 +862,23 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <input
                     type="text"
-                    placeholder="Certificate Title"
-                    value={certificateForm.title}
-                    onChange={(e) => setCertificateForm({...certificateForm, title: e.target.value})}
+                    placeholder="Certificate Name"
+                    value={certificateForm.name}
+                    onChange={(e) => setCertificateForm({...certificateForm, name: e.target.value})}
                     className="linkedin-input"
                   />
                   <input
                     type="text"
                     placeholder="Issuing Organization"
-                    value={certificateForm.issuingOrg}
-                    onChange={(e) => setCertificateForm({...certificateForm, issuingOrg: e.target.value})}
+                    value={certificateForm.issuer}
+                    onChange={(e) => setCertificateForm({...certificateForm, issuer: e.target.value})}
                     className="linkedin-input"
                   />
                   <input
                     type="url"
-                    placeholder="Certificate Link (optional)"
-                    value={certificateForm.link}
-                    onChange={(e) => setCertificateForm({...certificateForm, link: e.target.value})}
+                    placeholder="Certificate URL (optional)"
+                    value={certificateForm.url}
+                    onChange={(e) => setCertificateForm({...certificateForm, url: e.target.value})}
                     className="linkedin-input"
                   />
                   <input
@@ -903,12 +903,12 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
                   <div key={cert.id} className="linkedin-card p-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h4 className="font-semibold text-gray-900">{cert.title}</h4>
-                        <p className="text-gray-600">{cert.issuingOrg}</p>
+                        <h4 className="font-semibold text-gray-900">{cert.name}</h4>
+                        <p className="text-gray-600">{cert.issuer}</p>
                         <p className="text-sm text-gray-500">{cert.date}</p>
-                        {cert.link && (
+                        {cert.url && (
                           <a 
-                            href={cert.link} 
+                            href={cert.url} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="text-[#0a66c2] hover:underline text-sm"
@@ -918,7 +918,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
                         )}
                       </div>
                       <button
-                        onClick={() => removeCertificate(cert.id)}
+                        onClick={() => cert.id && removeCertificate(cert.id)}
                         className="text-red-600 hover:text-red-800"
                       >
                         <Trash2 className="w-4 h-4" />

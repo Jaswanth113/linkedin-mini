@@ -5,51 +5,234 @@ import { useProfile, UserProfile as UserProfileType } from '../hooks/useProfile'
 import { usePosts } from '../hooks/usePosts';
 import { useProfileViews } from '../hooks/useProfileViews';
 import { PostCard } from '../components/Feed/PostCard';
+import { ProfileSectionModal } from '../components/Profile/ProfileSectionModal';
 import {
   Edit,
-
-  Award,
-  FolderOpen,
-  FileText,
-  ExternalLink,
   Eye,
   TrendingUp,
   ArrowLeft,
   UserPlus,
   MessageCircle,
+  Plus,
   Briefcase,
+  Award,
+  FolderOpen,
+  FileText,
+  ExternalLink
 } from 'lucide-react';
 
-export function UserProfile() {
-  const [showEdit, setShowEdit] = useState(false);
-  const { userId: routeUserId } = useParams<{ userId: string }>();
-  const { currentUser } = useAuth();
-  const userId = routeUserId || currentUser?.id;
-  const isOwnProfile = !!userId && userId === currentUser?.id;
+function SectionForm({ section, onSave, onClose }: { section: any, onSave: (data: any) => void, onClose: () => void }) {
+  const [formData, setFormData] = useState<any>({});
 
-  const { profile, loading, error, updateProfile } = useProfile(userId);
+  useEffect(() => {
+    if (section) {
+      if (section.type === 'skills') {
+        // The skills array is passed directly in section.data
+        setFormData({ skills: (section.data || []).join(', ') });
+      } else {
+        setFormData(section.data || {});
+      }
+    }
+  }, [section]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev: any) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (section.type === 'skills') {
+      // For skills, convert the string back to an array and pass it inside an object.
+      onSave({ skills: formData.skills.split(',').map((s: string) => s.trim()).filter(Boolean) });
+    } else {
+      // For other sections, just pass the form data directly.
+      onSave(formData);
+    }
+  };
+
+  const renderFormFields = () => {
+    if (!section) return <p>Something went wrong.</p>;
+
+    switch (section.type) {
+      case 'skills':
+        return (
+          <textarea
+            name="skills"
+            value={formData.skills || ''}
+            onChange={handleChange}
+            placeholder="Enter skills, separated by commas"
+            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" rows={4}
+          />
+        );
+      case 'education':
+        return (
+          <div className="space-y-4">
+            <input name="school" value={formData.school || ''} onChange={handleChange} placeholder="School or University" className="w-full p-2 border border-gray-300 rounded-md" />
+            <input name="degree" value={formData.degree || ''} onChange={handleChange} placeholder="Degree" className="w-full p-2 border border-gray-300 rounded-md" />
+            <input name="fieldOfStudy" value={formData.fieldOfStudy || ''} onChange={handleChange} placeholder="Field of Study" className="w-full p-2 border border-gray-300 rounded-md" />
+            <div className="flex space-x-4">
+              <input name="startYear" value={formData.startYear || ''} onChange={handleChange} placeholder="Start Year" className="w-full p-2 border border-gray-300 rounded-md" />
+              <input name="endYear" value={formData.endYear || ''} onChange={handleChange} placeholder="End Year (or expected)" className="w-full p-2 border border-gray-300 rounded-md" />
+            </div>
+          </div>
+        );
+      case 'workExperience':
+        return (
+          <div className="space-y-4">
+            <input name="title" value={formData.title || ''} onChange={handleChange} placeholder="Job Title" className="w-full p-2 border border-gray-300 rounded-md" />
+            <input name="company" value={formData.company || ''} onChange={handleChange} placeholder="Company" className="w-full p-2 border border-gray-300 rounded-md" />
+            <input name="location" value={formData.location || ''} onChange={handleChange} placeholder="Location" className="w-full p-2 border border-gray-300 rounded-md" />
+            <div className="flex space-x-4">
+              <input name="startDate" value={formData.startDate || ''} onChange={handleChange} placeholder="Start Date" className="w-full p-2 border border-gray-300 rounded-md" />
+              <input name="endDate" value={formData.endDate || ''} onChange={handleChange} placeholder="End Date (or 'Present')" className="w-full p-2 border border-gray-300 rounded-md" />
+            </div>
+            <textarea name="description" value={formData.description || ''} onChange={handleChange} placeholder="Description" className="w-full p-2 border border-gray-300 rounded-md" rows={3}></textarea>
+          </div>
+        );
+        case 'projects':
+        return (
+          <div className="space-y-4">
+            <input name="name" value={formData.name || ''} onChange={handleChange} placeholder="Project Name" className="w-full p-2 border border-gray-300 rounded-md" />
+            <input name="date" value={formData.date || ''} onChange={handleChange} placeholder="Date (e.g., Jan 2023)" className="w-full p-2 border border-gray-300 rounded-md" />
+            <input name="url" value={formData.url || ''} onChange={handleChange} placeholder="Project URL" className="w-full p-2 border border-gray-300 rounded-md" />
+            <textarea name="description" value={formData.description || ''} onChange={handleChange} placeholder="Description" className="w-full p-2 border border-gray-300 rounded-md" rows={3}></textarea>
+          </div>
+        );
+      case 'certificates':
+        return (
+          <div className="space-y-4">
+            <input name="name" value={formData.name || ''} onChange={handleChange} placeholder="Certificate Name" className="w-full p-2 border border-gray-300 rounded-md" />
+            <input name="issuer" value={formData.issuer || ''} onChange={handleChange} placeholder="Issuing Organization" className="w-full p-2 border border-gray-300 rounded-md" />
+            <input name="date" value={formData.date || ''} onChange={handleChange} placeholder="Issue Date" className="w-full p-2 border border-gray-300 rounded-md" />
+            <input name="url" value={formData.url || ''} onChange={handleChange} placeholder="Credential URL" className="w-full p-2 border border-gray-300 rounded-md" />
+          </div>
+        );
+      case 'achievements':
+        return (
+          <div className="space-y-4">
+            <input name="title" value={formData.title || ''} onChange={handleChange} placeholder="Honor or Award Title" className="w-full p-2 border border-gray-300 rounded-md" />
+            <input name="issuer" value={formData.issuer || ''} onChange={handleChange} placeholder="Issuer" className="w-full p-2 border border-gray-300 rounded-md" />
+            <input name="date" value={formData.date || ''} onChange={handleChange} placeholder="Date" className="w-full p-2 border border-gray-300 rounded-md" />
+            <textarea name="description" value={formData.description || ''} onChange={handleChange} placeholder="Description" className="w-full p-2 border border-gray-300 rounded-md" rows={3}></textarea>
+          </div>
+        );
+      default:
+        return <p>Something went wrong.</p>;
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {renderFormFields()}
+      <div className="flex justify-end pt-4 border-t border-gray-200">
+        <button type="button" onClick={onClose} className="mr-3 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition">Cancel</button>
+        <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-[#0a66c2] rounded-md hover:bg-[#004182] transition">Save</button>
+      </div>
+    </form>
+  );
+}
+
+
+
+export function UserProfile() {
+  const [showEditModal, setShowEditModal] = useState(false);
+  const { userId: routeUserId } = useParams<{ userId: string }>();
+  const { currentUser, loading: authLoading } = useAuth();
+  
+  const [userId, setUserId] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    // This effect runs when authentication is complete.
+    // It sets the userId for the profile we need to load.
+    if (!authLoading) {
+      setUserId(routeUserId || currentUser?.id);
+    }
+  }, [authLoading, routeUserId, currentUser]);
+
+  // The profile hook is enabled only when we have a valid userId.
+  const { profile, loading: profileLoading, error, updateProfile } = useProfile(userId, !!userId);
+
+  const isOwnProfile = !authLoading && !profileLoading && !!currentUser && !!profile && currentUser.id === profile.id;
+
   const { getUserPosts } = usePosts();
   const { profileViews, postImpressions } = useProfileViews(userId);
 
-  const [editableProfile, setEditableProfile] = useState<Partial<UserProfileType> | null>(null);
+  const [isSectionModalOpen, setSectionModalOpen] = useState(false);
+  const [profileFormData, setProfileFormData] = useState<Partial<UserProfileType> | null>(null);
+  const [currentSection, setCurrentSection] = useState<{ type: string; data: any; index?: number } | null>(null);
 
   useEffect(() => {
-    if (profile) {
-      setEditableProfile(profile);
+    // Self-correcting effect: If the user is viewing their own profile
+    // and their displayName in the database doesn't match their auth displayName,
+    // update the database profile.
+    if (isOwnProfile && profile && currentUser?.displayName && profile.displayName !== currentUser.displayName) {
+      updateProfile({ displayName: currentUser.displayName });
     }
-  }, [profile]);
+  }, [isOwnProfile, profile, currentUser, updateProfile]);
 
-  const handleFormSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (editableProfile) {
-      await updateProfile(editableProfile);
+  const openSectionModal = (type: string, data: any = {}, index?: number) => {
+    if (type === 'skills') {
+      setCurrentSection({ type, data: profile?.skills || [] });
+    } else {
+      setCurrentSection({ type, data, index });
     }
-    setShowEdit(false);
+    setSectionModalOpen(true);
+  };
+
+  const closeSectionModal = () => {
+    setSectionModalOpen(false);
+    setCurrentSection(null);
+  };
+
+  const handleProfileFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setProfileFormData(prev => prev ? { ...prev, [e.target.name]: e.target.value } : null);
+  };
+
+  const handleProfileFormSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (profileFormData) {
+      await updateProfile(profileFormData);
+      setShowEditModal(false);
+    }
+  };
+
+  const handleSectionSave = async (formData: any) => {
+    if (!profile || !currentSection) return;
+
+    const { type, index } = currentSection;
+
+    try {
+      if (type === 'skills') {
+        // Handle skills update
+        await updateProfile({ skills: formData.skills });
+      } else {
+        // Handle updates for arrays of objects (Experience, Education, etc.)
+        const currentItems = (profile[type as keyof UserProfileType] as any[]) || [];
+        let updatedItems;
+
+        if (index !== undefined) {
+          // Update an existing item
+          updatedItems = [...currentItems];
+          updatedItems[index] = { ...updatedItems[index], ...formData };
+        } else {
+          // Add a new item
+          const newItem = { id: Date.now().toString(), ...formData };
+          updatedItems = [...currentItems, newItem];
+        }
+        await updateProfile({ [type]: updatedItems });
+      }
+      closeSectionModal(); // Close modal on successful save
+    } catch (err) {
+      console.error('Failed to save section:', err);
+      // Optionally: show an error message to the user
+    }
   };
 
   const userPosts = userId ? getUserPosts(userId) : [];
 
-  if (loading) {
+  // Show a loading spinner if we are waiting for auth or for the profile data to load.
+  if (authLoading || (userId && profileLoading)) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#0a66c2]"></div>
@@ -105,13 +288,11 @@ export function UserProfile() {
         {/* Profile Header */}
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-8">
           <div className="relative">
-            <div className="h-48 bg-gray-300">
-              {profile.coverPhoto && <img src={profile.coverPhoto} alt="Cover" className="w-full h-full object-cover" />}
-            </div>
-            <div className="absolute top-24 left-10">
-              <div className="w-32 h-32 bg-white rounded-full border-4 border-white shadow-lg flex items-center justify-center">
+            <img src={profile.coverPhoto || 'https://via.placeholder.com/1500x500'} alt="Cover" className="w-full h-48 object-cover" />
+            <div className="absolute top-24 left-6">
+              <div className="w-36 h-36 bg-white rounded-full flex items-center justify-center ring-4 ring-white">
                 {profile.profilePicture ? (
-                  <img src={profile.profilePicture} alt={profile.displayName || 'User'} className="w-full h-full rounded-full object-cover" />
+                  <img src={profile.profilePicture} alt={profile.displayName || 'Profile'} className="w-full h-full rounded-full object-cover" />
                 ) : (
                   <span className="text-4xl font-bold text-gray-500">{profile.displayName?.charAt(0).toUpperCase()}</span>
                 )}
@@ -121,22 +302,25 @@ export function UserProfile() {
               <div className="flex justify-between items-start">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900">{profile.displayName}</h1>
-                  <p className="text-lg text-gray-600">{profile.headline}</p>
-                  <p className="text-sm text-gray-500 mt-1">{profile.location}</p>
+                  <p className="text-gray-600 text-lg">{profile.headline}</p>
+                  <p className="text-gray-500 text-sm mt-1">{profile.location}</p>
                 </div>
-                <div>
+                <div className="flex items-center space-x-2">
                   {isOwnProfile ? (
                     <button 
-                      onClick={() => setShowEdit(true)} 
-                      className="bg-[#0a66c2] hover:bg-[#004182] text-white font-semibold py-2 px-4 rounded-full transition-colors flex items-center">
-                      <Edit className="w-4 h-4 mr-2" /> Edit Profile
+                      onClick={() => {
+                        setProfileFormData(profile);
+                        setShowEditModal(true); 
+                      }}
+                      className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-full hover:bg-blue-700 transition-colors duration-300 flex items-center">
+                      <Edit size={16} className="mr-2"/> Edit Profile
                     </button>
                   ) : (
-                    <div className="flex items-center space-x-2">
-                      <button className="bg-[#0a66c2] hover:bg-[#004182] text-white font-semibold py-2 px-4 rounded-full transition-colors flex items-center">
+                    <div className="flex space-x-2">
+                      <button className="px-4 py-2 bg-[#0a66c2] text-white rounded-full font-semibold hover:bg-[#004182] flex items-center">
                         <UserPlus className="w-4 h-4 mr-2" /> Connect
                       </button>
-                      <button className="bg-blue-100 text-[#0a66c2] font-semibold py-2 px-4 rounded-full transition-colors flex items-center hover:bg-blue-200">
+                      <button className="px-4 py-2 bg-white text-[#0a66c2] border border-[#0a66c2] rounded-full font-semibold hover:bg-blue-50 flex items-center">
                         <MessageCircle className="w-4 h-4 mr-2" /> Message
                       </button>
                     </div>
@@ -148,128 +332,208 @@ export function UserProfile() {
         </div>
 
         {/* Edit Profile Modal */}
-        {showEdit && (
+        {showEditModal && (
           <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-                <h3 className="text-2xl font-semibold text-gray-900">Edit Profile</h3>
-                <button onClick={() => setShowEdit(false)} className="text-gray-400 hover:text-gray-600 text-3xl font-light">&times;</button>
-              </div>
-              <form onSubmit={handleFormSubmit} className="p-8 space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="displayName">Display Name</label>
-                  <input type="text" id="displayName" value={editableProfile?.displayName || ''} onChange={(e) => setEditableProfile({ ...editableProfile, displayName: e.target.value })} className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <form onSubmit={handleProfileFormSubmit} className="p-6">
+                <h2 className="text-2xl font-bold mb-6">Edit Basic Info</h2>
+                <div className="space-y-4">
+                  <input type="text" name="displayName" value={profileFormData?.displayName || ''} onChange={handleProfileFormChange} className="w-full p-2 border rounded" placeholder="Your Name" />
+                  <input type="text" name="headline" value={profileFormData?.headline || ''} onChange={handleProfileFormChange} className="w-full p-2 border rounded" placeholder="Your Headline" />
+                  <textarea name="bio" value={profileFormData?.bio || ''} onChange={handleProfileFormChange} className="w-full p-2 border rounded" placeholder="About you"></textarea>
+                  <input type="text" name="location" value={profileFormData?.location || ''} onChange={handleProfileFormChange} className="w-full p-2 border rounded" placeholder="Location" />
+                  <input type="text" name="website" value={profileFormData?.website || ''} onChange={handleProfileFormChange} className="w-full p-2 border rounded" placeholder="Website URL" />
+                  <input type="text" name="linkedin" value={profileFormData?.linkedin || ''} onChange={handleProfileFormChange} className="w-full p-2 border rounded" placeholder="LinkedIn Profile URL" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="headline">Headline</label>
-                  <input type="text" id="headline" value={editableProfile?.headline || ''} onChange={(e) => setEditableProfile({ ...editableProfile, headline: e.target.value })} className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="bio">Bio</label>
-                  <textarea id="bio" value={editableProfile?.bio || ''} onChange={(e) => setEditableProfile({ ...editableProfile, bio: e.target.value })} className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" rows={4}></textarea>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="profilePicture">Profile Picture URL</label>
-                  <input type="text" id="profilePicture" value={editableProfile?.profilePicture || ''} onChange={(e) => setEditableProfile({ ...editableProfile, profilePicture: e.target.value })} className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="coverPhoto">Cover Photo URL</label>
-                  <input type="text" id="coverPhoto" value={editableProfile?.coverPhoto || ''} onChange={(e) => setEditableProfile({ ...editableProfile, coverPhoto: e.target.value })} className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                <div className="flex justify-end pt-4 border-t border-gray-200">
-                  <button type="button" onClick={() => setShowEdit(false)} className="mr-3 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition">Cancel</button>
-                  <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-[#0a66c2] rounded-md hover:bg-[#004182] transition">Save Changes</button>
+                <div className="mt-6 flex justify-end space-x-4">
+                  <button type="button" onClick={() => setShowEditModal(false)} className="px-4 py-2 rounded-md text-gray-600 bg-gray-100 hover:bg-gray-200">Cancel</button>
+                  <button type="submit" className="px-4 py-2 rounded-md bg-[#0a66c2] text-white hover:bg-[#004182]">Save</button>
                 </div>
               </form>
             </div>
           </div>
         )}
 
-        {/* Profile Content */}
+        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column (Main Content) */}
           <div className="lg:col-span-2 space-y-8">
-            {profile?.bio && (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">About</h3>
-                <p className="text-gray-700 whitespace-pre-wrap">{profile.bio}</p>
-              </div>
-            )}
 
-            {userPosts.length > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Posts</h3>
-                <div className="space-y-6">
-                  {userPosts.map(post => (
-                    <PostCard key={post.id} post={post} />
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* About Section */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">About</h3>
+              <p className="text-gray-700 whitespace-pre-wrap">{profile.bio || 'No bio available.'}</p>
+            </div>
 
-            {profile?.workExperience?.length > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Work Experience</h3>
-                <ul className="space-y-6">
-                  {profile.workExperience.map((job, index) => (
-                    <li key={index} className="flex items-start">
-                      <Briefcase className="w-10 h-10 mr-4 mt-1 text-[#0a66c2] flex-shrink-0" />
-                      <div>
-                        <h4 className="font-semibold text-gray-800 text-lg">{job.title}</h4>
-                        <p className="text-gray-700 font-medium">{job.company}</p>
-                        <p className="text-gray-500 text-sm">
-                          {job.startDate} - {job.endDate || 'Present'}
-                          {job.location && ` · ${job.location}`}
-                        </p>
-                        {job.description && <p className="text-gray-600 mt-2 text-sm">{job.description}</p>}
+            {/* Work Experience Section */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">Experience</h3>
+                {isOwnProfile && (
+                  <button onClick={() => openSectionModal('workExperience')} className="p-1 rounded-full hover:bg-gray-100">
+                    <Plus size={22} />
+                  </button>
+                )}
+              </div>
+              <div className="space-y-4">
+                {profile.workExperience?.map((exp, index) => (
+                  <div key={exp.id || index} className="flex">
+                    <Briefcase className="w-10 h-10 mr-4 text-gray-400"/>
+                    <div>
+                      <div className="flex justify-between">
+                        <h4 className="font-bold">{exp.title}</h4>
+                        {isOwnProfile && <button onClick={() => openSectionModal('workExperience', exp, index)}><Edit size={16}/></button>}
                       </div>
-                    </li>
-                  ))}
-                </ul>
+                      <p>{exp.company} · {exp.location}</p>
+                      <p className="text-sm text-gray-500">{exp.startDate} - {exp.endDate}</p>
+                      <p className="mt-2 text-sm">{exp.description}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
 
-            {profile?.projects?.length > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Projects</h3>
-                <ul className="space-y-4">
-                  {profile.projects.map((item, index) => (
-                    <li key={index} className="flex items-start">
-                      <FolderOpen className="w-5 h-5 mr-4 mt-1 text-[#0a66c2] flex-shrink-0" />
-                      <div>
-                        <div className="flex justify-between items-center">
-                          <h4 className="font-semibold text-gray-800">{item.name}</h4>
-                          {item.url && <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-sm text-[#0a66c2] hover:underline">View <ExternalLink className="w-3 h-3 ml-1 inline" /></a>}
-                        </div>
-                        <p className="text-gray-600 text-sm">{item.date}</p>
-                        {item.description && <p className="text-gray-600 mt-1 text-sm">{item.description}</p>}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+            {/* Education Section */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">Education</h3>
+                {isOwnProfile && (
+                  <button onClick={() => openSectionModal('education')} className="p-1 rounded-full hover:bg-gray-100">
+                    <Plus size={22} />
+                  </button>
+                )}
               </div>
-            )}
+              <div className="space-y-4">
+                {profile.education?.map((edu, index) => (
+                  <div key={edu.id || index} className="flex">
+                    <Award className="w-10 h-10 mr-4 text-gray-400"/>
+                    <div>
+                      <div className="flex justify-between">
+                        <h4 className="font-bold">{edu.school}</h4>
+                        {isOwnProfile && <button onClick={() => openSectionModal('education', edu, index)}><Edit size={16}/></button>}
+                      </div>
+                      <p>{edu.degree}, {edu.fieldOfStudy}</p>
+                      <p className="text-sm text-gray-500">{edu.startYear} - {edu.endYear}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-            {profile?.certificates?.length > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Licenses & Certifications</h3>
-                <ul className="space-y-4">
-                  {profile.certificates.map((item, index) => (
-                    <li key={index} className="flex items-start">
-                      <FileText className="w-5 h-5 mr-4 mt-1 text-[#0a66c2] flex-shrink-0" />
-                      <div>
-                        <h4 className="font-semibold text-gray-800">{item.name}</h4>
-                        <p className="text-gray-600 text-sm">{item.issuer} &middot; Issued {item.date}</p>
-                        {item.url && <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-sm text-[#0a66c2] hover:underline">Show Credential <ExternalLink className="w-3 h-3 ml-1 inline" /></a>}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+            {/* Projects Section */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">Projects</h3>
+                {isOwnProfile && (
+                  <button onClick={() => openSectionModal('projects')} className="p-1 rounded-full hover:bg-gray-100">
+                    <Plus size={22} />
+                  </button>
+                )}
               </div>
-            )}
+              <div className="space-y-4">
+                {profile.projects?.map((proj, index) => (
+                  <div key={proj.id || index} className="flex">
+                    <FolderOpen className="w-10 h-10 mr-4 text-gray-400"/>
+                    <div className="flex-grow">
+                      <div className="flex justify-between">
+                        <h4 className="font-bold">{proj.name}</h4>
+                        {isOwnProfile && <button onClick={() => openSectionModal('projects', proj, index)}><Edit size={16}/></button>}
+                      </div>
+                      <p className="text-sm text-gray-500">{proj.date}</p>
+                      <p className="mt-1 text-sm">{proj.description}</p>
+                      {proj.url && <a href={proj.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline flex items-center mt-1">View Project <ExternalLink className="w-4 h-4 ml-1"/></a>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Licenses & Certifications Section */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">Licenses & Certifications</h3>
+                {isOwnProfile && (
+                  <button onClick={() => openSectionModal('certificates')} className="p-1 rounded-full hover:bg-gray-100">
+                    <Plus size={22} />
+                  </button>
+                )}
+              </div>
+              <div className="space-y-4">
+                {profile.certificates?.map((cert, index) => (
+                  <div key={cert.id || index}>
+                    <div className="flex justify-between">
+                      <h4 className="font-bold flex items-center"><FileText className="w-5 h-5 mr-2 text-gray-400"/>{cert.name}</h4>
+                      {isOwnProfile && <button onClick={() => openSectionModal('certificates', cert, index)}><Edit size={16}/></button>}
+                    </div>
+                    <p className="text-sm text-gray-500 ml-7">{cert.issuer}</p>
+                    <p className="text-sm text-gray-500 ml-7">Issued {cert.date}</p>
+                    {cert.url && <a href={cert.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline ml-7 flex items-center">Show credential <ExternalLink className="w-4 h-4 ml-1"/></a>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Skills Section */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">Skills</h3>
+                {isOwnProfile && (
+                  <button onClick={() => openSectionModal('skills')} className="p-1 rounded-full hover:bg-gray-100">
+                    <Plus size={22} />
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {profile.skills?.map(skill => (
+                  <span key={skill} className="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Achievements Section */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">Honors & Awards</h3>
+                {isOwnProfile && (
+                  <button onClick={() => openSectionModal('achievements')} className="p-1 rounded-full hover:bg-gray-100">
+                    <Plus size={22} />
+                  </button>
+                )}
+              </div>
+              <div className="space-y-4">
+                {profile.achievements?.map((ach, index) => (
+                  <div key={ach.id || index} className="flex">
+                    <Award className="w-10 h-10 mr-4 text-gray-400"/>
+                    <div className="flex-grow">
+                      <div className="flex justify-between">
+                        <h4 className="font-bold">{ach.title}</h4>
+                        {isOwnProfile && <button onClick={() => openSectionModal('achievements', ach, index)}><Edit size={16}/></button>}
+                      </div>
+                      <p className="text-sm text-gray-500">Issued by {ach.issuer} · {ach.date}</p>
+                      {ach.description && <p className="mt-1 text-sm">{ach.description}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+
+
+            {/* Posts Section */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">Posts</h3>
+              <div className="space-y-6">
+                {userPosts.length > 0 ? (
+                  userPosts.map(post => <PostCard key={post.id} post={post} />)
+                ) : (
+                  <p className="text-gray-500">This user hasn't posted anything yet.</p>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Right Column (Sidebar) */}
+          {/* Right Sidebar */}
           <div className="lg:col-span-1 space-y-8">
             {isOwnProfile && (
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
@@ -287,38 +551,22 @@ export function UserProfile() {
               </div>
             )}
 
-            {profile?.skills?.length > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Skills</h3>
-                <div className="flex flex-wrap gap-2">
-                  {profile.skills.map((skill, index) => (
-                    <span key={index} className="bg-blue-100 text-[#0a66c2] text-sm font-semibold px-3 py-1 rounded-full">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {profile?.achievements?.length > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Honors & Awards</h3>
-                <ul className="space-y-4">
-                  {profile.achievements.map((item, index) => (
-                    <li key={index} className="flex items-start">
-                      <Award className="w-5 h-5 mr-4 mt-1 text-[#0a66c2] flex-shrink-0" />
-                      <div>
-                        <h4 className="font-semibold text-gray-800">{item.title}</h4>
-                        <p className="text-gray-600 text-sm">{item.issuer} &middot; {item.date}</p>
-                        {item.description && <p className="text-gray-600 mt-1 text-sm">{item.description}</p>}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+
+
           </div>
         </div>
+
+        <ProfileSectionModal 
+          isOpen={isSectionModalOpen} 
+          onClose={closeSectionModal} 
+          title={currentSection ? `${currentSection.index !== undefined ? 'Edit' : 'Add'} ${currentSection.type.charAt(0).toUpperCase() + currentSection.type.slice(1)}` : ''}>
+            {currentSection && <SectionForm 
+              section={currentSection} 
+              onSave={handleSectionSave} 
+              onClose={closeSectionModal} 
+            />}
+        </ProfileSectionModal>
       </div>
     </>
   );

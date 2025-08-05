@@ -33,41 +33,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Ensure user profile exists
-        const userRef = doc(db, 'users', firebaseUser.uid);
-        const userDoc = await getDoc(userRef);
-        
-        if (!userDoc.exists()) {
-          // Create profile if missing
-          const userData = {
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName || 'User',
-            profilePicture: `https://images.unsplash.com/photo-${Math.floor(Math.random() * 1000)}?w=150&h=150&fit=crop&crop=face`,
-            bio: '',
-            skills: [],
-            certificates: [],
-            projects: [],
-            workExperience: [],
-            education: [],
-            achievements: [],
-            createdAt: new Date().toISOString()
-          };
-          await setDoc(userRef, userData);
-        }
+        try {
+          const userDocRef = doc(db, 'users', firebaseUser.uid);
+          const userDoc = await getDoc(userDocRef);
 
-        const userData = userDoc.exists() ? userDoc.data() : {};
-        
-        const user: User = {
-          id: firebaseUser.uid,
-          email: firebaseUser.email || '',
-          displayName: userData?.displayName || firebaseUser.displayName || 'User',
-          profilePicture: userData?.profilePicture || firebaseUser.photoURL || ''
-        };
-        setCurrentUser(user);
+          if (userDoc.exists()) {
+            const userProfile = { id: firebaseUser.uid, ...userDoc.data() } as User;
+            setCurrentUser(userProfile);
+          } else {
+            // Create a new profile if it doesn't exist
+            const newUser: User = {
+              id: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              displayName: firebaseUser.displayName || 'New User',
+              profilePicture: firebaseUser.photoURL || `https://avatar.vercel.sh/${firebaseUser.uid}`,
+            };
+            await setDoc(userDocRef, newUser);
+            setCurrentUser(newUser);
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          // In case of error, we still have a firebase user, but no profile.
+          // We can set a minimal user object or handle it as needed.
+          setCurrentUser({
+            id: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            displayName: firebaseUser.displayName || 'Error User',
+          });
+        } finally {
+          setLoading(false);
+        }
       } else {
         setCurrentUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();

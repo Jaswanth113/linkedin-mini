@@ -1,13 +1,57 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from './useAuth';
 import {
   doc,
   getDoc,
   setDoc,
-  updateDoc,
+
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+
+export interface Education {
+  id?: string;
+  school: string;
+  degree: string;
+  fieldOfStudy: string;
+  startYear: string;
+  endYear?: string;
+}
+
+export interface WorkExperience {
+  id?: string;
+  title: string;
+  company: string;
+  location?: string;
+  startDate: string;
+  endDate?: string;
+  description?: string;
+}
+
+export interface Achievement {
+  id?: string;
+  title: string;
+  issuer: string;
+  date: string;
+  description?: string;
+}
+
+export interface Project {
+  id?: string;
+  name: string;
+  description: string;
+  url?: string;
+  technologies?: string[];
+  date?: string;
+}
+
+export interface Certificate {
+  id?: string;
+  name: string;
+  issuer: string;
+  date: string;
+  credentialId?: string;
+  url?: string;
+}
 
 export interface UserProfile {
   id: string;
@@ -23,52 +67,18 @@ export interface UserProfile {
   linkedin?: string;
   skills: string[];
   languages: string[];
-  education: Array<{
-    school: string;
-    degree: string;
-    field: string;
-    startYear: number;
-    endYear?: number;
-  }>;
-  workExperience: Array<{
-    title: string;
-    company: string;
-    location?: string;
-    startDate: string;
-    endDate?: string;
-    description?: string;
-  }>;
-  achievements: Array<{
-    id: string;
-    title: string;
-    issuer: string;
-    date: string;
-    description?: string;
-  }>;
-  projects: Array<{
-    id: string;
-    name: string;
-    description: string;
-    url?: string;
-    technologies?: string[];
-    date?: string;
-  }>;
-  certificates: Array<{
-    id: string;
-    name: string;
-    issuer: string;
-    date: string;
-    credentialId?: string;
-    url?: string;
-  }>;
+  education: Education[];
+  workExperience: WorkExperience[];
+  achievements: Achievement[];
+  projects: Project[];
+  certificates: Certificate[];
   profileViews: number;
   postImpressions: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export function useProfile(userId?: string) {
-  const { currentUser } = useAuth();
+export function useProfile(uid: string | undefined, enabled: boolean = true) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,28 +153,45 @@ export function useProfile(userId?: string) {
   }, []);
 
   useEffect(() => {
-    const targetUserId = userId || currentUser?.id;
-
-    if (targetUserId) {
-      setLoading(true);
-      getProfileByUid(targetUserId)
-        .then(setProfile)
-        .catch(setError)
-        .finally(() => setLoading(false));
-    } else {
+    if (!enabled || !uid) {
       setProfile(null);
       setLoading(false);
+      return;
     }
-  }, [userId, currentUser, getProfileByUid]);
+
+    const fetchProfile = async () => {
+      setLoading(true);
+      setError(null);
+      const profileData = await getProfileByUid(uid);
+      setProfile(profileData);
+      setLoading(false);
+    };
+
+    fetchProfile();
+  }, [uid, enabled, getProfileByUid]);
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!profile) return;
 
     try {
-      await updateDoc(doc(db, 'users', profile.id), {
+      const userDocRef = doc(db, 'users', profile.id);
+      const currentProfileData = (await getDoc(userDocRef)).data() || {};
+      const updateData = {
+        ...currentProfileData,
         ...updates,
         updatedAt: new Date(),
-      });
+      };
+
+      // For array fields, ensure we are replacing the whole array if provided in updates
+      if (updates.skills) updateData.skills = updates.skills;
+      if (updates.languages) updateData.languages = updates.languages;
+      if (updates.education) updateData.education = updates.education;
+      if (updates.workExperience) updateData.workExperience = updates.workExperience;
+      if (updates.achievements) updateData.achievements = updates.achievements;
+      if (updates.projects) updateData.projects = updates.projects;
+      if (updates.certificates) updateData.certificates = updates.certificates;
+
+      await setDoc(userDocRef, updateData, { merge: true });
       // Refresh local profile state after update
       const updatedProfile = await getProfileByUid(profile.id);
       setProfile(updatedProfile);
