@@ -8,11 +8,13 @@ import {
   Globe,
   Trash2
 } from 'lucide-react';
+import Avatar from '../UI/Avatar';
 import { Post } from '../../hooks/usePosts';
 import { usePosts } from '../../hooks/usePosts';
 import { useAuth } from '../../hooks/useAuth';
 import { useProfileViews } from '../../hooks/useProfileViews';
 import { useProfile } from '../../hooks/useProfile';
+import { PollDisplay } from './PollDisplay';
 
 interface PostCardProps {
   post: Post;
@@ -98,19 +100,10 @@ export function PostCard({ post }: PostCardProps) {
               </div>
             ) : (
               <div className="flex items-start space-x-2">
-                <div className="w-12 h-12 bg-[#0a66c2] rounded-full flex items-center justify-center flex-shrink-0">
-                  {authorProfile?.profilePicture ? (
-                    <img 
-                      src={authorProfile.profilePicture} 
-                      alt={authorProfile.displayName}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-white font-semibold text-lg">
-                      {authorProfile?.displayName?.charAt(0) || 'U'}
-                    </span>
-                  )}
-                </div>
+                <Avatar 
+                  name={authorProfile?.displayName} 
+                  className="w-12 h-12"
+                />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-1">
                     <Link 
@@ -152,8 +145,11 @@ export function PostCard({ post }: PostCardProps) {
 
         {/* Post Content */}
         <div className="mb-3">
-          <p className="text-[#000000] text-sm leading-[1.4] whitespace-pre-wrap">{post.content}</p>
+          <p className="text-[#000000] text-sm whitespace-pre-wrap break-words">{post.content}</p>
         </div>
+
+        {/* Poll Display */}
+        {post.poll && <PollDisplay post={post} />}
       </div>
 
       {/* Engagement Stats */}
@@ -237,19 +233,10 @@ export function PostCard({ post }: PostCardProps) {
           {/* Add Comment */}
           <div className="flex items-start space-x-2 mb-3">
             {currentUser && (
-              <div className="w-8 h-8 bg-[#0a66c2] rounded-full flex items-center justify-center flex-shrink-0">
-                {currentUser.profilePicture ? (
-                  <img 
-                    src={currentUser.profilePicture} 
-                    alt={currentUser.displayName || 'User'}
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-white font-semibold text-xs">
-                    {currentUser.displayName?.charAt(0) || 'U'}
-                  </span>
-                )}
-              </div>
+              <Avatar 
+                name={currentUser.displayName} 
+                className="w-8 h-8"
+              />
             )}
             <div className="flex-1">
               <div className="flex items-center space-x-2">
@@ -276,19 +263,10 @@ export function PostCard({ post }: PostCardProps) {
           <div className="space-y-3">
             {post.comments?.map((comment) => (
               <div key={comment.id} className="flex items-start space-x-2">
-                <div className="w-8 h-8 bg-[#0a66c2] rounded-full flex items-center justify-center flex-shrink-0">
-                  {comment.authorAvatar ? (
-                    <img 
-                      src={comment.authorAvatar} 
-                      alt={comment.authorName}
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-white font-semibold text-xs">
-                      {comment.authorName?.charAt(0) || 'U'}
-                    </span>
-                  )}
-                </div>
+                <Avatar 
+                  name={comment.authorName} 
+                  className="w-8 h-8"
+                />
                 <div className="flex-1">
                   <div className="bg-[#f3f2ef] rounded-lg px-3 py-2">
                     <div className="flex items-center space-x-2 mb-1">

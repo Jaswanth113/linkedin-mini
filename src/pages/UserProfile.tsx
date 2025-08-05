@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useProfile, UserProfile as UserProfileType } from '../hooks/useProfile';
 import { usePosts } from '../hooks/usePosts';
 import { useProfileViews } from '../hooks/useProfileViews';
+import Avatar from '../components/UI/Avatar';
 import { PostCard } from '../components/Feed/PostCard';
 import { ProfileSectionModal } from '../components/Profile/ProfileSectionModal';
 import {
@@ -11,14 +12,13 @@ import {
   Eye,
   TrendingUp,
   ArrowLeft,
-  UserPlus,
-  MessageCircle,
   Plus,
   Briefcase,
   Award,
   FolderOpen,
   FileText,
-  ExternalLink
+  ExternalLink,
+  GraduationCap
 } from 'lucide-react';
 
 function SectionForm({ section, onSave, onClose }: { section: any, onSave: (data: any) => void, onClose: () => void }) {
@@ -286,46 +286,60 @@ export function UserProfile() {
         </div>
 
         {/* Profile Header */}
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-8">
-          <div className="relative">
-            <img src={profile.coverPhoto || 'https://via.placeholder.com/1500x500'} alt="Cover" className="w-full h-48 object-cover" />
-            <div className="absolute top-24 left-6">
-              <div className="w-36 h-36 bg-white rounded-full flex items-center justify-center ring-4 ring-white">
-                {profile.profilePicture ? (
-                  <img src={profile.profilePicture} alt={profile.displayName || 'Profile'} className="w-full h-full rounded-full object-cover" />
-                ) : (
-                  <span className="text-4xl font-bold text-gray-500">{profile.displayName?.charAt(0).toUpperCase()}</span>
+        <div className="linkedin-card overflow-hidden mb-6">
+          {/* Cover Photo */}
+          <div className="relative h-[200px] bg-gradient-to-r from-[#0a66c2] to-[#004182]">
+            {profile?.coverPhoto && (
+              <img 
+                src={profile.coverPhoto} 
+                alt="Cover" 
+                className="w-full h-full object-cover"
+              />
+            )}
+          </div>
+          
+          {/* Profile Info */}
+          <div className="px-6 pb-6 relative">
+            {/* Profile Picture */}
+            <div className="relative flex justify-center lg:justify-start -mt-20">
+              <div className="w-[160px] h-[160px] rounded-full border-4 border-white shadow-lg relative">
+                <Avatar name={profile.displayName} className="w-full h-full text-6xl" />
+                {isOwnProfile && (
+                  <button 
+                    onClick={() => openSectionModal('profilePicture', { profilePicture: profile.profilePicture, coverPhoto: profile.coverPhoto })} 
+                    className="absolute bottom-2 right-2 bg-white p-2 rounded-full shadow-lg hover:bg-gray-100 transition-colors">
+                    <Edit className="w-4 h-4 text-gray-600" />
+                  </button>
                 )}
               </div>
             </div>
-            <div className="pt-4 pl-48 pr-6 pb-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">{profile.displayName}</h1>
-                  <p className="text-gray-600 text-lg">{profile.headline}</p>
-                  <p className="text-gray-500 text-sm mt-1">{profile.location}</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {isOwnProfile ? (
+
+            {/* Profile Details */}
+            <div className="text-center lg:text-left pt-4">
+               <div className="flex justify-end">
+                 {isOwnProfile && (
                     <button 
-                      onClick={() => {
-                        setProfileFormData(profile);
-                        setShowEditModal(true); 
-                      }}
-                      className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-full hover:bg-blue-700 transition-colors duration-300 flex items-center">
-                      <Edit size={16} className="mr-2"/> Edit Profile
+                      onClick={() => openSectionModal('profileSummary', { displayName: profile.displayName, headline: profile.headline, location: profile.location, bio: profile.bio })} 
+                      className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+                      <Edit className="w-5 h-5 text-gray-600" />
                     </button>
-                  ) : (
-                    <div className="flex space-x-2">
-                      <button className="px-4 py-2 bg-[#0a66c2] text-white rounded-full font-semibold hover:bg-[#004182] flex items-center">
-                        <UserPlus className="w-4 h-4 mr-2" /> Connect
-                      </button>
-                      <button className="px-4 py-2 bg-white text-[#0a66c2] border border-[#0a66c2] rounded-full font-semibold hover:bg-blue-50 flex items-center">
-                        <MessageCircle className="w-4 h-4 mr-2" /> Message
-                      </button>
-                    </div>
                   )}
-                </div>
+              </div>
+              <h1 className="text-[28px] font-semibold text-[#000000] mb-1">{profile.displayName}</h1>
+              <p className="text-[18px] text-[#666666] mb-2">{profile.headline}</p>
+              <p className="text-sm text-gray-500 mb-4">{profile.location}</p>
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                {!isOwnProfile && (
+                  <div className="flex space-x-2">
+                    <button className="linkedin-btn-primary px-6 py-2 flex items-center">
+                      Connect
+                    </button>
+                    <button className="linkedin-btn-secondary px-6 py-2 flex items-center">
+                      Message
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -355,37 +369,49 @@ export function UserProfile() {
         )}
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
 
             {/* About Section */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">About</h3>
-              <p className="text-gray-700 whitespace-pre-wrap">{profile.bio || 'No bio available.'}</p>
+            <div className="linkedin-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-[20px] font-semibold text-[#000000]">About</h2>
+                  {isOwnProfile && (
+                    <button onClick={() => openSectionModal('basic', { bio: profile.bio })} className="p-2 hover:bg-[#f3f2ef] rounded-full transition-colors">
+                      <Edit className="w-4 h-4 text-[#666666]" />
+                    </button>
+                  )}
+              </div>
+              <p className="text-[14px] text-[#000000] leading-[1.4] whitespace-pre-wrap">{profile.bio || 'No bio available.'}</p>
             </div>
 
             {/* Work Experience Section */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold text-gray-900">Experience</h3>
+            <div className="linkedin-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[20px] font-semibold text-[#000000]">Experience</h2>
                 {isOwnProfile && (
-                  <button onClick={() => openSectionModal('workExperience')} className="p-1 rounded-full hover:bg-gray-100">
-                    <Plus size={22} />
+                  <button onClick={() => openSectionModal('workExperience')} className="p-2 hover:bg-[#f3f2ef] rounded-full transition-colors">
+                    <Plus className="w-4 h-4 text-[#666666]" />
                   </button>
                 )}
               </div>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {profile.workExperience?.map((exp, index) => (
-                  <div key={exp.id || index} className="flex">
-                    <Briefcase className="w-10 h-10 mr-4 text-gray-400"/>
-                    <div>
+                  <div key={exp.id || index} className="flex items-start space-x-3">
+                    <div className="w-12 h-12 bg-[#f3f2ef] rounded flex items-center justify-center flex-shrink-0">
+                        <Briefcase className="w-6 h-6 text-[#666666]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
                       <div className="flex justify-between">
-                        <h4 className="font-bold">{exp.title}</h4>
-                        {isOwnProfile && <button onClick={() => openSectionModal('workExperience', exp, index)}><Edit size={16}/></button>}
+                        <h3 className="text-[16px] font-semibold text-[#000000] mb-1">{exp.title}</h3>
+                        {isOwnProfile && <button onClick={() => openSectionModal('workExperience', exp, index)} className="p-2 hover:bg-[#f3f2ef] rounded-full transition-colors"><Edit className="w-4 h-4 text-[#666666]"/></button>}
                       </div>
-                      <p>{exp.company} · {exp.location}</p>
-                      <p className="text-sm text-gray-500">{exp.startDate} - {exp.endDate}</p>
-                      <p className="mt-2 text-sm">{exp.description}</p>
+                      <p className="text-[14px] text-[#000000] mb-1">{exp.company}</p>
+                      <p className="text-[12px] text-[#666666] mb-1">{exp.startDate} - {exp.endDate || 'Present'}</p>
+                      {exp.location && <p className="text-[12px] text-[#666666] mb-2">{exp.location}</p>}
+                      {exp.description && (
+                        <p className="text-[14px] text-[#000000] leading-[1.4] whitespace-pre-wrap">{exp.description}</p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -393,26 +419,28 @@ export function UserProfile() {
             </div>
 
             {/* Education Section */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold text-gray-900">Education</h3>
+            <div className="linkedin-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[20px] font-semibold text-[#000000]">Education</h2>
                 {isOwnProfile && (
-                  <button onClick={() => openSectionModal('education')} className="p-1 rounded-full hover:bg-gray-100">
-                    <Plus size={22} />
+                  <button onClick={() => openSectionModal('education')} className="p-2 hover:bg-[#f3f2ef] rounded-full transition-colors">
+                    <Plus className="w-4 h-4 text-[#666666]" />
                   </button>
                 )}
               </div>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {profile.education?.map((edu, index) => (
-                  <div key={edu.id || index} className="flex">
-                    <Award className="w-10 h-10 mr-4 text-gray-400"/>
-                    <div>
+                  <div key={edu.id || index} className="flex items-start space-x-3">
+                    <div className="w-12 h-12 bg-[#f3f2ef] rounded flex items-center justify-center flex-shrink-0">
+                      <GraduationCap className="w-6 h-6 text-[#666666]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
                       <div className="flex justify-between">
-                        <h4 className="font-bold">{edu.school}</h4>
-                        {isOwnProfile && <button onClick={() => openSectionModal('education', edu, index)}><Edit size={16}/></button>}
+                        <h3 className="text-[16px] font-semibold text-[#000000] mb-1">{edu.school}</h3>
+                        {isOwnProfile && <button onClick={() => openSectionModal('education', edu, index)} className="p-2 hover:bg-[#f3f2ef] rounded-full transition-colors"><Edit className="w-4 h-4 text-[#666666]" /></button>}
                       </div>
-                      <p>{edu.degree}, {edu.fieldOfStudy}</p>
-                      <p className="text-sm text-gray-500">{edu.startYear} - {edu.endYear}</p>
+                      <p className="text-[14px] text-[#000000] mb-1">{edu.degree}, {edu.fieldOfStudy}</p>
+                      <p className="text-[12px] text-[#666666] mb-2">{edu.startYear} - {edu.endYear || 'Present'}</p>
                     </div>
                   </div>
                 ))}
@@ -420,27 +448,31 @@ export function UserProfile() {
             </div>
 
             {/* Projects Section */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold text-gray-900">Projects</h3>
+            <div className="linkedin-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[20px] font-semibold text-[#000000]">Projects</h2>
                 {isOwnProfile && (
-                  <button onClick={() => openSectionModal('projects')} className="p-1 rounded-full hover:bg-gray-100">
-                    <Plus size={22} />
+                  <button onClick={() => openSectionModal('projects')} className="p-2 hover:bg-[#f3f2ef] rounded-full transition-colors">
+                    <Plus className="w-4 h-4 text-[#666666]" />
                   </button>
                 )}
               </div>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {profile.projects?.map((proj, index) => (
-                  <div key={proj.id || index} className="flex">
-                    <FolderOpen className="w-10 h-10 mr-4 text-gray-400"/>
-                    <div className="flex-grow">
+                  <div key={proj.id || index} className="flex items-start space-x-3">
+                    <div className="w-12 h-12 bg-[#f3f2ef] rounded flex items-center justify-center flex-shrink-0">
+                      <FolderOpen className="w-6 h-6 text-[#666666]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
                       <div className="flex justify-between">
-                        <h4 className="font-bold">{proj.name}</h4>
-                        {isOwnProfile && <button onClick={() => openSectionModal('projects', proj, index)}><Edit size={16}/></button>}
+                        <h3 className="text-[16px] font-semibold text-[#000000] mb-1">{proj.name}</h3>
+                        {isOwnProfile && <button onClick={() => openSectionModal('projects', proj, index)} className="p-2 hover:bg-[#f3f2ef] rounded-full transition-colors"><Edit className="w-4 h-4 text-[#666666]" /></button>}
                       </div>
-                      <p className="text-sm text-gray-500">{proj.date}</p>
-                      <p className="mt-1 text-sm">{proj.description}</p>
-                      {proj.url && <a href={proj.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline flex items-center mt-1">View Project <ExternalLink className="w-4 h-4 ml-1"/></a>}
+                      {proj.date && <p className="text-[12px] text-[#666666] mb-2">{proj.date}</p>}
+                      {proj.description && (
+                        <p className="text-[14px] text-[#000000] leading-[1.4] whitespace-pre-wrap mb-2">{proj.description}</p>
+                      )}
+                      {proj.url && <a href={proj.url} target="_blank" rel="noopener noreferrer" className="text-[14px] text-[#0a66c2] hover:underline font-medium flex items-center">View Project <ExternalLink className="w-4 h-4 ml-1"/></a>}
                     </div>
                   </div>
                 ))}
@@ -448,81 +480,102 @@ export function UserProfile() {
             </div>
 
             {/* Licenses & Certifications Section */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold text-gray-900">Licenses & Certifications</h3>
+            <div className="linkedin-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[20px] font-semibold text-[#000000]">Licenses & Certifications</h2>
                 {isOwnProfile && (
-                  <button onClick={() => openSectionModal('certificates')} className="p-1 rounded-full hover:bg-gray-100">
-                    <Plus size={22} />
+                  <button onClick={() => openSectionModal('certificates')} className="p-2 hover:bg-[#f3f2ef] rounded-full transition-colors">
+                    <Plus className="w-4 h-4 text-[#666666]" />
                   </button>
                 )}
               </div>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {profile.certificates?.map((cert, index) => (
-                  <div key={cert.id || index}>
-                    <div className="flex justify-between">
-                      <h4 className="font-bold flex items-center"><FileText className="w-5 h-5 mr-2 text-gray-400"/>{cert.name}</h4>
-                      {isOwnProfile && <button onClick={() => openSectionModal('certificates', cert, index)}><Edit size={16}/></button>}
+                  <div key={cert.id || index} className="flex items-start space-x-3">
+                    <div className="w-12 h-12 bg-[#f3f2ef] rounded flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-6 h-6 text-[#666666]" />
                     </div>
-                    <p className="text-sm text-gray-500 ml-7">{cert.issuer}</p>
-                    <p className="text-sm text-gray-500 ml-7">Issued {cert.date}</p>
-                    {cert.url && <a href={cert.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline ml-7 flex items-center">Show credential <ExternalLink className="w-4 h-4 ml-1"/></a>}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between">
+                        <h3 className="text-[16px] font-semibold text-[#000000] mb-1">{cert.name}</h3>
+                        {isOwnProfile && <button onClick={() => openSectionModal('certificates', cert, index)} className="p-2 hover:bg-[#f3f2ef] rounded-full transition-colors"><Edit className="w-4 h-4 text-[#666666]" /></button>}
+                      </div>
+                      <p className="text-[14px] text-[#000000] mb-1">{cert.issuer}</p>
+                      <p className="text-[12px] text-[#666666] mb-2">Issued {cert.date}</p>
+                      {cert.url && <a href={cert.url} target="_blank" rel="noopener noreferrer" className="text-[14px] text-[#0a66c2] hover:underline font-medium flex items-center">Show credential <ExternalLink className="w-4 h-4 ml-1"/></a>}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Skills Section */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold text-gray-900">Skills</h3>
-                {isOwnProfile && (
-                  <button onClick={() => openSectionModal('skills')} className="p-1 rounded-full hover:bg-gray-100">
-                    <Plus size={22} />
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {profile.skills?.map(skill => (
-                  <span key={skill} className="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
-                    {skill}
-                  </span>
-                ))}
-              </div>
+            {/* Skills & Languages Section */}
+            <div className="linkedin-card p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-[20px] font-semibold text-[#000000]">Skills & Languages</h2>
+                    {isOwnProfile && (
+                        <button onClick={() => openSectionModal('skills')} className="p-2 hover:bg-[#f3f2ef] rounded-full transition-colors">
+                            <Edit className="w-4 h-4 text-[#666666]" />
+                        </button>
+                    )}
+                </div>
+                <div>
+                    <h3 className="text-[16px] font-semibold text-[#000000] mb-3">Skills</h3>
+                    <div className="flex flex-wrap gap-2">
+                        {profile.skills?.map(skill => (
+                            <span key={skill} className="bg-[#eef3f8] text-[#0a66c2] rounded-full px-3 py-1 text-[14px] font-medium">
+                                {skill}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+                <div className="mt-6">
+                    <h3 className="text-[16px] font-semibold text-[#000000] mb-3">Languages</h3>
+                    <div className="flex flex-wrap gap-2">
+                        {profile.languages?.map(lang => (
+                            <span key={lang} className="bg-[#eef3f8] text-[#0a66c2] rounded-full px-3 py-1 text-[14px] font-medium">
+                                {lang}
+                            </span>
+                        ))}
+                    </div>
+                </div>
             </div>
 
             {/* Achievements Section */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold text-gray-900">Honors & Awards</h3>
+            <div className="linkedin-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[20px] font-semibold text-[#000000]">Honors & Awards</h2>
                 {isOwnProfile && (
-                  <button onClick={() => openSectionModal('achievements')} className="p-1 rounded-full hover:bg-gray-100">
-                    <Plus size={22} />
+                  <button onClick={() => openSectionModal('achievements')} className="p-2 hover:bg-[#f3f2ef] rounded-full transition-colors">
+                    <Plus className="w-4 h-4 text-[#666666]" />
                   </button>
                 )}
               </div>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {profile.achievements?.map((ach, index) => (
-                  <div key={ach.id || index} className="flex">
-                    <Award className="w-10 h-10 mr-4 text-gray-400"/>
-                    <div className="flex-grow">
+                  <div key={ach.id || index} className="flex items-start space-x-3">
+                    <div className="w-12 h-12 bg-[#f3f2ef] rounded flex items-center justify-center flex-shrink-0">
+                      <Award className="w-6 h-6 text-[#666666]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
                       <div className="flex justify-between">
-                        <h4 className="font-bold">{ach.title}</h4>
-                        {isOwnProfile && <button onClick={() => openSectionModal('achievements', ach, index)}><Edit size={16}/></button>}
+                        <h3 className="text-[16px] font-semibold text-[#000000] mb-1">{ach.title}</h3>
+                        {isOwnProfile && <button onClick={() => openSectionModal('achievements', ach, index)} className="p-2 hover:bg-[#f3f2ef] rounded-full transition-colors"><Edit className="w-4 h-4 text-[#666666]" /></button>}
                       </div>
-                      <p className="text-sm text-gray-500">Issued by {ach.issuer} · {ach.date}</p>
-                      {ach.description && <p className="mt-1 text-sm">{ach.description}</p>}
+                      <p className="text-[14px] text-[#000000] mb-1">Issued by {ach.issuer}</p>
+                      <p className="text-[12px] text-[#666666] mb-2">Issued on {ach.date}</p>
+                      {ach.description && (
+                        <p className="text-[14px] text-[#000000] leading-[1.4] whitespace-pre-wrap">{ach.description}</p>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-
-
             {/* Posts Section */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">Posts</h3>
+            <div className="linkedin-card p-6">
+              <h2 className="text-[20px] font-semibold text-[#000000] mb-4">Posts</h2>
               <div className="space-y-6">
                 {userPosts.length > 0 ? (
                   userPosts.map(post => <PostCard key={post.id} post={post} />)
@@ -534,26 +587,24 @@ export function UserProfile() {
           </div>
 
           {/* Right Sidebar */}
-          <div className="lg:col-span-1 space-y-8">
+          <div className="lg:col-span-1 space-y-6">
             {isOwnProfile && (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Analytics</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center text-gray-600">
-                    <Eye className="w-5 h-5 mr-3 text-[#0a66c2]" />
-                    <span><span className="font-bold">{profileViews}</span> profile views</span>
+              <div className="linkedin-card p-6">
+                <h2 className="text-[20px] font-semibold text-[#000000] mb-4">Analytics</h2>
+                <div className="space-y-4">
+                  <div className="flex items-center text-gray-700">
+                    <Eye className="w-5 h-5 mr-3 text-[#666666]" />
+                    <span className="font-semibold">{profileViews}</span>
+                    <span className="ml-2">profile views</span>
                   </div>
-                  <div className="flex items-center text-gray-600">
-                    <TrendingUp className="w-5 h-5 mr-3 text-[#0a66c2]" />
-                    <span><span className="font-bold">{postImpressions}</span> post impressions</span>
+                  <div className="flex items-center text-gray-700">
+                    <TrendingUp className="w-5 h-5 mr-3 text-[#666666]" />
+                    <span className="font-semibold">{postImpressions}</span>
+                    <span className="ml-2">post impressions</span>
                   </div>
                 </div>
               </div>
             )}
-
-
-
-
           </div>
         </div>
 

@@ -17,6 +17,17 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: string[];
+}
+
+export interface Poll {
+  question: string;
+  options: PollOption[];
+}
+
 export interface Post {
   id: string;
   content: string;
@@ -28,6 +39,7 @@ export interface Post {
   comments: Comment[];
   shares: number;
   createdAt: Date;
+  poll?: Poll;
 }
 
 export interface Comment {
@@ -89,7 +101,7 @@ export function usePosts() {
     }
   };
 
-  const createPost = async (content: string) => {
+  const createPost = async (content: string, poll?: Poll) => {
     if (!currentUser) {
       throw new Error('User not authenticated');
     }
@@ -108,7 +120,8 @@ export function usePosts() {
         likes: [],
         comments: [],
         shares: 0,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        ...(poll && { poll }),
       };
 
       await addDoc(collection(db, 'posts'), postData);
@@ -202,6 +215,35 @@ export function usePosts() {
     return post.likes.includes(currentUser.id);
   };
 
+  const voteOnPoll = async (postId: string, optionId: string) => {
+    if (!currentUser) return;
+
+    try {
+      const postRef = doc(db, 'posts', postId);
+      const postSnapshot = await getDoc(postRef);
+      if (!postSnapshot.exists()) return;
+
+      const post = postSnapshot.data() as Post;
+      if (!post.poll) return;
+
+      const newOptions = post.poll.options.map(option => {
+        // Remove user's vote from any option they previously voted for
+        const newVotes = option.votes.filter(voterId => voterId !== currentUser.id);
+        // If this is the option they just voted for, add their vote
+        if (option.id === optionId) {
+          newVotes.push(currentUser.id);
+        }
+        return { ...option, votes: newVotes };
+      });
+
+      await updateDoc(postRef, {
+        'poll.options': newOptions
+      });
+    } catch (error) {
+      console.error('Error voting on poll:', error);
+    }
+  };
+
   return {
     posts,
     loading,
@@ -212,5 +254,6 @@ export function usePosts() {
     getUserPosts,
     isPostLikedByUser,
     deletePost,
+    voteOnPoll,
   };
-} 
+}

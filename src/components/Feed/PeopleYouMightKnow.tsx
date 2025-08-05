@@ -1,59 +1,50 @@
-import React from 'react';
-import { UserPlus, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { db } from '../../firebase/config';
+import { useAuth } from '../../hooks/useAuth';
+import { X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-interface SuggestedUser {
-  id: string;
-  name: string;
-  headline: string;
-  avatar?: string;
-  mutualConnections: number;
-}
+import Avatar from '../UI/Avatar';
+import { UserProfile } from '../../hooks/useProfile';
+import { useConnections, ConnectionStatus } from '../../hooks/useConnections';
 
 export function PeopleYouMightKnow() {
-  // Mock data for suggested connections
-  const suggestedUsers: SuggestedUser[] = [
-    {
-      id: 'user1',
-      name: 'Sarah Johnson',
-      headline: 'Software Engineer at Google',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
-      mutualConnections: 12
-    },
-    {
-      id: 'user2',
-      name: 'Michael Chen',
-      headline: 'Product Manager at Microsoft',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-      mutualConnections: 8
-    },
-    {
-      id: 'user3',
-      name: 'Emily Rodriguez',
-      headline: 'UX Designer at Adobe',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
-      mutualConnections: 5
-    },
-    {
-      id: 'user4',
-      name: 'David Kim',
-      headline: 'Data Scientist at Netflix',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-      mutualConnections: 15
-    },
-    {
-      id: 'user5',
-      name: 'Lisa Wang',
-      headline: 'Marketing Director at Spotify',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face',
-      mutualConnections: 3
-    }
-  ];
+  const { currentUser } = useAuth();
+  const {
+    getConnectionStatus,
+    sendConnectionRequest,
+    acceptConnectionRequest,
+    declineConnectionRequest,
+    removeConnection,
+    loading: connectionsLoading,
+  } = useConnections();
+  const [suggestedUsers, setSuggestedUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleConnect = (userId: string) => {
-    console.log('Connecting to user:', userId);
-    // TODO: Implement connection logic
-  };
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (!currentUser) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const usersCollection = collection(db, 'profiles');
+        const q = query(usersCollection, limit(10)); // Fetch more to have options for filtering
+        const usersSnapshot = await getDocs(q);
+        const usersList = usersSnapshot.docs
+          .map(doc => doc.data() as UserProfile)
+          .filter(user => user.id !== currentUser.id) // Filter out the current user
+          .slice(0, 5); // Take the first 5
+        setSuggestedUsers(usersList);
+      } catch (error) {
+        console.error('Error fetching suggested users:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [currentUser]);
 
   const handleDismiss = (userId: string) => {
     console.log('Dismissing user:', userId);
@@ -64,59 +55,46 @@ export function PeopleYouMightKnow() {
     <div className="linkedin-card">
       <div className="p-4">
         <h3 className="text-lg font-semibold text-[#000000] mb-4">People you may know</h3>
-        
         <div className="space-y-4">
-          {suggestedUsers.slice(0, 3).map((user) => (
-            <div key={user.id} className="flex items-start space-x-3">
-              <Link to={`/user/${user.id}`} className="flex-shrink-0">
-                <div className="w-12 h-12 bg-[#0a66c2] rounded-full flex items-center justify-center">
-                  {user.avatar ? (
-                    <img 
-                      src={user.avatar} 
-                      alt={user.name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-white font-semibold text-lg">
-                      {user.name.charAt(0)}
-                    </span>
-                  )}
-                </div>
-              </Link>
-              
-              <div className="flex-1 min-w-0">
-                <Link to={`/user/${user.id}`} className="block">
-                  <h4 className="font-semibold text-[#000000] text-sm hover:text-[#0a66c2] hover:underline">
-                    {user.name}
-                  </h4>
+          {(connectionsLoading || loading) ? (
+            <p className="text-xs text-gray-500">Loading suggestions...</p>
+          ) : suggestedUsers.length === 0 ? (
+            <p className="text-xs text-gray-500">No new suggestions right now.</p>
+          ) : (
+            suggestedUsers.map((user) => (
+              <div key={user.id} className="flex items-start space-x-3">
+                <Link to={`/user/${user.id}`} className="flex-shrink-0">
+                  <Avatar 
+                    name={user.displayName} 
+                    className="w-12 h-12"
+                  />
                 </Link>
-                <p className="text-xs text-[#666666] mb-1 line-clamp-2">{user.headline}</p>
-                <p className="text-xs text-[#666666] mb-2">
-                  {user.mutualConnections} mutual connection{user.mutualConnections !== 1 ? 's' : ''}
-                </p>
-                
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => handleConnect(user.id)}
-                    className="flex items-center space-x-1 bg-transparent border border-[#0a66c2] text-[#0a66c2] hover:bg-[#0a66c2] hover:text-white px-3 py-1 rounded-full text-xs font-medium transition-colors"
-                  >
-                    <UserPlus className="w-3 h-3" />
-                    <span>Connect</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => handleDismiss(user.id)}
-                    className="p-1 text-[#666666] hover:text-[#000000] hover:bg-[#f3f2ef] rounded-full transition-colors"
-                    title="Dismiss"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+
+                <div className="flex-1 min-w-0">
+                  <Link to={`/user/${user.id}`} className="block">
+                    <h4 className="font-semibold text-[#000000] text-sm hover:text-[#0a66c2] hover:underline">
+                      {user.displayName}
+                    </h4>
+                  </Link>
+                  <p className="text-xs text-[#666666] mb-1 line-clamp-2">{user.headline || 'No headline'}</p>
+
+                  <div className="flex items-center space-x-2">
+                    {renderConnectButton(getConnectionStatus(user.id), user.id)}
+
+                    <button
+                      onClick={() => handleDismiss(user.id)}
+                      className="p-1 text-[#666666] hover:text-[#000000] hover:bg-[#f3f2ef] rounded-full transition-colors"
+                      title="Dismiss"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
-        
+
         <div className="mt-4 pt-3 border-t border-[#d9d9d9]">
           <button className="text-sm text-[#666666] hover:text-[#0a66c2] font-medium">
             Show more
@@ -125,4 +103,55 @@ export function PeopleYouMightKnow() {
       </div>
     </div>
   );
+
+  function renderConnectButton(status: ConnectionStatus, targetUserId: string) {
+    switch (status) {
+      case 'not_connected':
+        return (
+          <button
+            onClick={() => sendConnectionRequest(targetUserId)}
+            className="px-3 py-1 text-sm font-semibold text-[#0a66c2] border border-[#0a66c2] rounded-full hover:bg-[#e6f0f8]"
+          >
+            Connect
+          </button>
+        );
+      case 'pending_sent':
+        return (
+          <button
+            disabled
+            className="px-3 py-1 text-sm font-semibold text-gray-500 border border-gray-300 rounded-full cursor-not-allowed"
+          >
+            Pending
+          </button>
+        );
+      case 'pending_received':
+        return (
+          <div className="flex space-x-2">
+            <button
+              onClick={() => acceptConnectionRequest(targetUserId)}
+              className="px-3 py-1 text-sm font-semibold text-green-600 border border-green-600 rounded-full hover:bg-green-50"
+            >
+              Accept
+            </button>
+            <button
+              onClick={() => declineConnectionRequest(targetUserId)}
+              className="p-1.5 rounded-full hover:bg-gray-200"
+            >
+              <X className="w-4 h-4 text-gray-500" />
+            </button>
+          </div>
+        );
+      case 'connected':
+        return (
+          <button
+            onClick={() => removeConnection(targetUserId)}
+            className="px-3 py-1 text-sm font-semibold text-gray-700 border border-gray-400 rounded-full hover:bg-gray-100"
+          >
+            Connected
+          </button>
+        );
+      default:
+        return null;
+    }
+  }
 }
