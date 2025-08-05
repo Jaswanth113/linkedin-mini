@@ -11,8 +11,8 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
-  const { profile, loading: profileLoading } = useProfile();
   const { currentUser, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading } = useProfile(currentUser?.id);
   const { profileViews, postImpressions } = useProfileViews(currentUser?.id);
   
   // Only show right sidebar on home page
@@ -66,7 +66,7 @@ export function Layout({ children }: LayoutProps) {
                 {/* Profile Info */}
                 <div className="pt-8 pb-4 px-3 text-center">
                   <h3 className="font-semibold text-[16px] text-[#000000] mb-1 hover:underline cursor-pointer">
-                    {profile?.displayName || 'User'}
+                    {profile?.displayName || currentUser?.displayName || 'User'}
                   </h3>
                   <p className="text-[12px] text-[#666666] mb-4 leading-[1.33]">
                     {profile?.headline || 'Software Engineer'}

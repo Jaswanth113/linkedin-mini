@@ -12,7 +12,8 @@ import {
   serverTimestamp,
   increment,
   onSnapshot,
-  deleteDoc
+  deleteDoc,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
@@ -94,11 +95,16 @@ export function usePosts() {
     }
 
     try {
+      // Fetch user profile to get headline
+      const userDoc = await getDoc(doc(db, 'users', currentUser.id));
+      const userProfile = userDoc.exists() ? userDoc.data() : {};
+      
       const postData = {
         content,
         authorId: currentUser.id,
-        authorName: currentUser.displayName,
+        authorName: currentUser.displayName || 'User',
         authorAvatar: currentUser.profilePicture,
+        authorHeadline: userProfile.headline || '',
         likes: [],
         comments: [],
         shares: 0,

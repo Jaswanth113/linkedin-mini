@@ -12,19 +12,20 @@ import { Post } from '../../hooks/usePosts';
 import { usePosts } from '../../hooks/usePosts';
 import { useAuth } from '../../hooks/useAuth';
 import { useProfileViews } from '../../hooks/useProfileViews';
+import { useProfile } from '../../hooks/useProfile';
 
 interface PostCardProps {
   post: Post;
 }
 
 export function PostCard({ post }: PostCardProps) {
-  const { likePost, addComment, sharePost, isPostLikedByUser, deletePost } = usePosts();
   const { currentUser } = useAuth();
-  const { incrementPostImpressions } = useProfileViews(currentUser?.id);
+  const { likePost, addComment, sharePost, isPostLikedByUser, deletePost } = usePosts();
+  const { profile: authorProfile, loading: authorLoading } = useProfile(post.authorId);
+  const { incrementPostImpressions } = useProfileViews(post.authorId);
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
 
-  // Track post impression when component mounts
   useEffect(() => {
     incrementPostImpressions();
   }, []);
@@ -84,41 +85,55 @@ export function PostCard({ post }: PostCardProps) {
     <div className="linkedin-card mb-2">
       {/* Post Header */}
       <div className="p-3">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-start space-x-2">
-            <div className="w-12 h-12 bg-[#0a66c2] rounded-full flex items-center justify-center flex-shrink-0">
-              {post.authorAvatar ? (
-                <img 
-                  src={post.authorAvatar} 
-                  alt={post.authorName}
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              ) : (
-                <span className="text-white font-semibold text-lg">
-                  {post.authorName?.charAt(0) || 'U'}
-                </span>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-1">
-                <Link 
-                  to={`/user/${post.authorId}`}
-                  className="font-semibold text-[#000000] text-sm hover:text-[#0a66c2] hover:underline"
-                >
-                  {post.authorName}
-                </Link>
-                <span className="text-[#666666] text-xs">• 1st</span>
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0">
+            {authorLoading ? (
+              <div className="flex items-start space-x-2 animate-pulse">
+                <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
+                <div className="flex-1 space-y-2 py-1">
+                  <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+                  <div className="h-3 bg-gray-300 rounded w-1/4"></div>
+                </div>
               </div>
-              {post.authorHeadline && (
-                <p className="text-[#666666] text-xs leading-tight">{post.authorHeadline}</p>
-              )}
-              <div className="flex items-center space-x-1 text-[#666666] text-xs">
-                <span>{formatTimestamp(post.createdAt)}</span>
-                <span>•</span>
-                <Globe className="w-3 h-3" />
+            ) : (
+              <div className="flex items-start space-x-2">
+                <div className="w-12 h-12 bg-[#0a66c2] rounded-full flex items-center justify-center flex-shrink-0">
+                  {authorProfile?.profilePicture ? (
+                    <img 
+                      src={authorProfile.profilePicture} 
+                      alt={authorProfile.displayName}
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-white font-semibold text-lg">
+                      {authorProfile?.displayName?.charAt(0) || 'U'}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center space-x-1">
+                    <Link 
+                      to={`/user/${post.authorId}`}
+                      className="font-semibold text-[#000000] text-sm hover:text-[#0a66c2] hover:underline"
+                    >
+                      {authorProfile?.displayName || 'User'}
+                    </Link>
+                    <span className="text-[#666666] text-xs">• 1st</span>
+                  </div>
+                  {authorProfile?.headline && (
+                    <p className="text-[#666666] text-xs leading-tight truncate">{authorProfile.headline}</p>
+                  )}
+                  <div className="flex items-center space-x-1 text-[#666666] text-xs">
+                    <span>{formatTimestamp(post.createdAt)}</span>
+                    <span>•</span>
+                    <Globe className="w-3 h-3" />
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
+
           {/* Delete button for author only */}
           {currentUser?.id === post.authorId && (
             <button
@@ -127,7 +142,7 @@ export function PostCard({ post }: PostCardProps) {
                   deletePost(post.id);
                 }
               }}
-              className="text-red-600 hover:bg-red-50 p-2 rounded-full transition-colors"
+              className="text-gray-500 hover:bg-gray-100 p-2 rounded-full transition-colors flex-shrink-0"
               title="Delete post"
             >
               <Trash2 className="w-4 h-4" />
@@ -221,19 +236,21 @@ export function PostCard({ post }: PostCardProps) {
         <div className="px-3 pb-3 border-t border-[#d9d9d9] mt-2 pt-3">
           {/* Add Comment */}
           <div className="flex items-start space-x-2 mb-3">
-            <div className="w-8 h-8 bg-[#0a66c2] rounded-full flex items-center justify-center flex-shrink-0">
-              {currentUser?.profilePicture ? (
-                <img 
-                  src={currentUser.profilePicture} 
-                  alt={currentUser.displayName || 'User'}
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              ) : (
-                <span className="text-white font-semibold text-xs">
-                  {currentUser?.displayName?.charAt(0) || 'U'}
-                </span>
-              )}
-            </div>
+            {currentUser && (
+              <div className="w-8 h-8 bg-[#0a66c2] rounded-full flex items-center justify-center flex-shrink-0">
+                {currentUser.profilePicture ? (
+                  <img 
+                    src={currentUser.profilePicture} 
+                    alt={currentUser.displayName || 'User'}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white font-semibold text-xs">
+                    {currentUser.displayName?.charAt(0) || 'U'}
+                  </span>
+                )}
+              </div>
+            )}
             <div className="flex-1">
               <div className="flex items-center space-x-2">
                 <input

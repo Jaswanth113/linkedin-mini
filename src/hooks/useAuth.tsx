@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+  import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const user: User = {
           id: firebaseUser.uid,
           email: firebaseUser.email || '',
-          displayName: userData?.displayName || firebaseUser.displayName || '',
+          displayName: userData?.displayName || firebaseUser.displayName || 'User',
           profilePicture: userData?.profilePicture || firebaseUser.photoURL || ''
         };
         setCurrentUser(user);
@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const user: User = {
         id: userCredential.user.uid,
         email: userCredential.user.email || '',
-        displayName: userData?.displayName || userCredential.user.displayName || '',
+        displayName: userData?.displayName || userCredential.user.displayName || 'User',
         profilePicture: userData?.profilePicture || userCredential.user.photoURL || ''
       };
       

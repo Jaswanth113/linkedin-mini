@@ -1,19 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
-import { 
-  doc, 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
-  arrayUnion, 
-  arrayRemove 
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  Timestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 export interface UserProfile {
   id: string;
-  email: string;
-  displayName: string;
+  email: string | null;
+  displayName: string | null;
   profilePicture?: string;
   coverPhoto?: string;
   headline?: string;
@@ -48,7 +47,7 @@ export interface UserProfile {
   }>;
   projects: Array<{
     id: string;
-    title: string;
+    name: string;
     description: string;
     url?: string;
     technologies?: string[];
@@ -56,10 +55,10 @@ export interface UserProfile {
   }>;
   certificates: Array<{
     id: string;
-    title: string;
+    name: string;
     issuer: string;
     date: string;
-    description?: string;
+    credentialId?: string;
     url?: string;
   }>;
   profileViews: number;
@@ -68,116 +67,34 @@ export interface UserProfile {
   updatedAt: Date;
 }
 
-export function useProfile() {
+export function useProfile(userId?: string) {
   const { currentUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (currentUser) {
-      loadProfile();
-    } else {
-      setLoading(false);
-    }
-  }, [currentUser]);
-
-  const loadProfile = async () => {
-    if (!currentUser) return;
-    
+  const getProfileByUid = useCallback(async (uid: string): Promise<UserProfile | null> => {
     try {
-      const userDoc = await getDoc(doc(db, 'users', currentUser.id));
-      
+      const userDocRef = doc(db, 'users', uid);
+      const userDoc = await getDoc(userDocRef);
+
       if (userDoc.exists()) {
         const data = userDoc.data();
-        const userProfile: UserProfile = {
-          id: currentUser.id,
-          email: data.email || currentUser.email,
-          displayName: data.displayName || currentUser.displayName,
-          profilePicture: data.profilePicture || currentUser.profilePicture,
-          coverPhoto: data.coverPhoto,
-          headline: data.headline,
-          bio: data.bio,
-          location: data.location,
-          phone: data.phone,
-          website: data.website,
-          linkedin: data.linkedin,
-          skills: data.skills || [],
-          languages: data.languages || [],
-          education: data.education || [],
-          workExperience: data.workExperience || [],
-          achievements: data.achievements || [],
-          projects: data.projects || [],
-          certificates: data.certificates || [],
-          profileViews: data.profileViews || 0,
-          postImpressions: data.postImpressions || 0,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date()
-        };
-        setProfile(userProfile);
-      } else {
-        // Create default profile
-        const defaultProfile: UserProfile = {
-          id: currentUser.id,
-          email: currentUser.email,
-          displayName: currentUser.displayName,
-          profilePicture: currentUser.profilePicture,
-          skills: [],
-          languages: [],
-          education: [],
-          workExperience: [],
-          achievements: [],
-          projects: [],
-          certificates: [],
-          profileViews: 0,
-          postImpressions: 0,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        setProfile(defaultProfile);
-        await setDoc(doc(db, 'users', currentUser.id), defaultProfile);
-      }
-    } catch (error) {
-      console.error('Error loading profile:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date();
+        const updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date();
 
-  const updateProfile = async (updates: Partial<UserProfile>) => {
-    if (!profile || !currentUser) return;
-
-    try {
-      const updatedProfile = { ...profile, ...updates, updatedAt: new Date() };
-      setProfile(updatedProfile);
-      
-      await updateDoc(doc(db, 'users', currentUser.id), {
-        ...updates,
-        updatedAt: new Date()
-      });
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      throw error;
-    }
-  };
-
-  const getProfileByUid = async (uid: string): Promise<UserProfile | null> => {
-    try {
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      
-      if (userDoc.exists()) {
-        const data = userDoc.data();
         return {
           id: uid,
-          email: data.email || '',
-          displayName: data.displayName || 'Unknown User',
-          profilePicture: data.profilePicture,
-          coverPhoto: data.coverPhoto,
-          headline: data.headline,
-          bio: data.bio,
-          location: data.location,
-          phone: data.phone,
-          website: data.website,
-          linkedin: data.linkedin,
+          email: data.email || null,
+          displayName: data.displayName || `User ${uid.substring(0, 6)}`,
+          profilePicture: data.profilePicture || undefined,
+          coverPhoto: data.coverPhoto || '',
+          headline: data.headline || '',
+          bio: data.bio || '',
+          location: data.location || '',
+          phone: data.phone || '',
+          website: data.website || '',
+          linkedin: data.linkedin || '',
           skills: data.skills || [],
           languages: data.languages || [],
           education: data.education || [],
@@ -187,15 +104,22 @@ export function useProfile() {
           certificates: data.certificates || [],
           profileViews: data.profileViews || 0,
           postImpressions: data.postImpressions || 0,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date()
+          createdAt,
+          updatedAt,
         };
       } else {
-        // If user document doesn't exist, create a basic profile
-        const basicProfile: UserProfile = {
+        const defaultProfile: UserProfile = {
           id: uid,
-          email: '',
-          displayName: 'User',
+          email: null,
+          displayName: `User ${uid.substring(0, 6)}`,
+
+          coverPhoto: '',
+          headline: '',
+          bio: '',
+          location: '',
+          phone: '',
+          website: '',
+          linkedin: '',
           skills: [],
           languages: [],
           education: [],
@@ -206,46 +130,68 @@ export function useProfile() {
           profileViews: 0,
           postImpressions: 0,
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         };
-        
-        // Create the document in Firestore
-        await setDoc(doc(db, 'users', uid), basicProfile);
-        return basicProfile;
+        await setDoc(userDocRef, defaultProfile);
+        return defaultProfile;
       }
-    } catch (error) {
-      console.error('Error getting user profile:', error);
+    } catch (err) {
+      console.error('Error fetching or creating profile:', err);
+      setError('Failed to load profile.');
       return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    const targetUserId = userId || currentUser?.id;
+
+    if (targetUserId) {
+      setLoading(true);
+      getProfileByUid(targetUserId)
+        .then(setProfile)
+        .catch(setError)
+        .finally(() => setLoading(false));
+    } else {
+      setProfile(null);
+      setLoading(false);
+    }
+  }, [userId, currentUser, getProfileByUid]);
+
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    if (!profile) return;
+
+    try {
+      await updateDoc(doc(db, 'users', profile.id), {
+        ...updates,
+        updatedAt: new Date(),
+      });
+      // Refresh local profile state after update
+      const updatedProfile = await getProfileByUid(profile.id);
+      setProfile(updatedProfile);
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      setError('Failed to update profile.');
     }
   };
 
-  // CRUD operations for profile sections
-  const addSkill = async (skill: string) => {
+  const addSkill = (skill: string) => {
     if (!profile) return;
-    await updateProfile({
-      skills: [...profile.skills, skill]
-    });
+    updateProfile({ skills: [...profile.skills, skill] });
   };
 
-  const removeSkill = async (skill: string) => {
+  const removeSkill = (skill: string) => {
     if (!profile) return;
-    await updateProfile({
-      skills: profile.skills.filter(s => s !== skill)
-    });
+    updateProfile({ skills: profile.skills.filter((s) => s !== skill) });
   };
 
-  const addLanguage = async (language: string) => {
+  const addLanguage = (language: string) => {
     if (!profile) return;
-    await updateProfile({
-      languages: [...profile.languages, language]
-    });
+    updateProfile({ languages: [...profile.languages, language] });
   };
 
-  const removeLanguage = async (language: string) => {
+  const removeLanguage = (language: string) => {
     if (!profile) return;
-    await updateProfile({
-      languages: profile.languages.filter(l => l !== language)
-    });
+    updateProfile({ languages: profile.languages.filter((l) => l !== language) });
   };
 
   const addEducation = async (education: UserProfile['education'][0]) => {
@@ -371,6 +317,7 @@ export function useProfile() {
   return {
     profile,
     loading,
+    error,
     updateProfile,
     getProfileByUid,
     addSkill,
@@ -393,4 +340,4 @@ export function useProfile() {
     updateCertificate,
     removeCertificate
   };
-} 
+}
