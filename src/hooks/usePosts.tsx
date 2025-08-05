@@ -115,7 +115,7 @@ export function usePosts() {
         content,
         authorId: currentUser.id,
         authorName: currentUser.displayName || 'User',
-        authorAvatar: currentUser.profilePicture,
+        authorAvatar: userProfile.profilePicture || null,
         authorHeadline: userProfile.headline || '',
         likes: [],
         comments: [],
@@ -162,12 +162,15 @@ export function usePosts() {
     if (!currentUser || !content.trim()) return;
 
     try {
+      const userDoc = await getDoc(doc(db, 'users', currentUser.id));
+      const userProfile = userDoc.exists() ? userDoc.data() : {};
+
       const newComment: Comment = {
         id: Date.now().toString(),
         content,
         authorId: currentUser.id,
-        authorName: currentUser.displayName,
-        authorAvatar: currentUser.profilePicture,
+        authorName: currentUser.displayName || 'User',
+        authorAvatar: userProfile.profilePicture || null,
         createdAt: new Date()
       };
 
